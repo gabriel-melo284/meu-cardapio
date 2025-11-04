@@ -16,8 +16,8 @@ const STORE = {
   city: "Sua Cidade",
   opensAt: "10:00",
   closesAt: "22:00",
-  banner: "/banner.jpg",         // coloque este arquivo em /public/banner.jpg
-  logo: "/umami-logo.png",       // coloque este arquivo em /public/umami-logo.png
+  banner: "/banner.jpg",         // /public/banner.jpg
+  logo: "/umami-logo.png",       // /public/umami-logo.png
 };
 
 /** =================== BASE =================== **/
@@ -65,29 +65,20 @@ export default function App(){
 
   const [categories, setCategories] = useState(()=> safeLoad(LS.cats(ACCESS_KEY), DEFAULT_CATEGORIES));
   const [menu,        setMenu]      = useState(()=> safeLoad(LS.menu(ACCESS_KEY), DEFAULT_MENU));
-  const [tab,         setTab]       = useState(()=> categories[0]?.id || "marmitas");
+  const [tab,         setTab]       = useState(()=> "principal"); // começa na Principal
   const [query,       setQuery]     = useState("");
   const [cart,        setCart]      = useState([]);
 
   // popups
   const [showNewCat,  setShowNewCat]  = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
+  const [newItemCat,  setNewItemCat]  = useState(""); // para criar item a partir da Principal
 
   // prioridade quando o usuário clica manualmente
   const [manualTabPriority, setManualTabPriority] = useState(false);
 
-  // aba "virtual" Principal (não salva no storage)
+  // abas incluindo a "Principal"
   const tabs = useMemo(() => [{ id:"principal", label:"Principal" }, ...categories], [categories]);
-
-  useEffect(()=>{ if(!Array.isArray(categories)||categories.length===0) setCategories(DEFAULT_CATEGORIES); },[categories]);
-
-  useEffect(()=>{
-    // se a aba atual deixou de existir (exceto principal), seleciona a primeira categoria
-    if(tab !== "principal" && !categories.find(c=>c.id===tab)){
-      const first = categories[0]?.id || "marmitas";
-      if(first !== tab) setTab(first);
-    }
-  },[categories, tab]);
 
   useEffect(()=> safeSave(LS.cats(ACCESS_KEY), categories), [categories]);
   useEffect(()=> safeSave(LS.menu(ACCESS_KEY), menu), [menu]);
@@ -104,11 +95,10 @@ export default function App(){
     );
   }
 
-  // auto-seleção de sessão quando houver busca (se usuário não clicou manualmente)
+  // auto-seleção de sessão na busca (se o usuário não clicou manualmente)
   useEffect(()=>{
     const q = query.trim().toLowerCase();
-    if(!q){ 
-      // não alteramos a aba ao limpar a busca (mantém a última selecionada)
+    if(!q){
       setManualTabPriority(false);
       return;
     }
@@ -120,11 +110,11 @@ export default function App(){
       return (i.name||"").toLowerCase().includes(q) || (i.desc||"").toLowerCase().includes(q) || catLabel.includes(q);
     });
     if(firstMatch && firstMatch.category !== tab){
-      setTab(firstMatch.category); // seleciona a sessão do item encontrado
+      setTab(firstMatch.category);
     }
   },[query, manualTabPriority, menu, categories, tab]);
 
-  // filtro (Principal = todas, senão por sessão). Busca varre todas.
+  // filtro da lista principal (quando há busca mostra resultados globais)
   const filtered = useMemo(()=>{
     const avail = menu.filter(i=>i.available);
     const q = query.trim().toLowerCase();
@@ -159,9 +149,14 @@ export default function App(){
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl mx-auto w-full px-4 pb-6">
             <div className="flex items-center gap-4">
-              <img src={STORE.logo} alt="logo" className="w-20 h-20 rounded-full ring-4 ring-white object-cover bg-white"/>
+              {/* LOGO MAIOR E NÍTIDA */}
+              <img
+                src={STORE.logo}
+                alt="logo"
+                className="w-32 h-32 rounded-full ring-8 ring-white object-cover bg-white shadow-md"
+              />
               <div>
-                <h1 className="text-white text-2xl font-bold">{STORE.name}</h1>
+                <h1 className="text-white text-3xl font-bold">{STORE.name}</h1>
                 <p className="text-white/90 text-sm">{STORE.address} • {STORE.city}</p>
                 <p className="text-white/80 text-xs">Hoje: {STORE.opensAt} – {STORE.closesAt}</p>
               </div>
@@ -174,7 +169,7 @@ export default function App(){
       <div className="sticky top-0 z-30 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <input
-            placeholder="Buscar no cardápio (todas as sessões)"
+            placeholder="Buscar no cardápio"
             className="flex-1 rounded-full border px-4 py-2 focus:outline-none"
             value={query}
             onChange={(e)=> setQuery(e.target.value)}
@@ -197,7 +192,7 @@ export default function App(){
             ))}
             {isAdmin && (
               <button
-                className="ml-auto px-3 py-2 rounded-full border"
+                className="ml-auto w-10 h-10 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
                 title="Criar nova sessão"
                 onClick={()=> setShowNewCat(true)}
               >+</button>
@@ -214,30 +209,69 @@ export default function App(){
             : <SectionTitle id={tab} categories={tabs}/>
           }
 
-          {/* não permitir criar item quando a aba é 'principal' */}
+          {/* Botão + para criar item (não aparece na Principal) */}
           {!query.trim() && isAdmin && tab!=="principal" && (
             <button
-              className="mb-4 px-3 py-2 rounded-full border"
+              className="mb-4 w-10 h-10 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
               title="Adicionar item nesta sessão"
-              onClick={()=> setShowNewItem(true)}
+              onClick={()=> { setNewItemCat(tab); setShowNewItem(true); }}
             >+</button>
           )}
 
-          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map(item=>(
-              <CardItem
-                key={item.id}
-                item={item}
-                onAdd={(it)=> setCart(prev=>{
-                  const f = prev.find(p=>p.id===it.id);
-                  return f ? prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p) : [...prev, {...it, qty:1}];
-                })}
-                isAdmin={isAdmin}
-                onEdit={upsertItem}
-                onDelete={removeItem}
-              />
-            ))}
-          </div>
+          {/* Render principal como subseções */}
+          {tab === "principal" && !query.trim() ? (
+            <div className="space-y-8">
+              {categories.map(cat=>{
+                const items = menu.filter(i=>i.available && i.category===cat.id);
+                if(items.length===0) return null;
+                return (
+                  <div key={cat.id}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xl font-bold">{cat.label}</h3>
+                      {isAdmin && (
+                        <button
+                          className="w-9 h-9 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
+                          title={`Adicionar item em ${cat.label}`}
+                          onClick={()=>{ setNewItemCat(cat.id); setShowNewItem(true); }}
+                        >+</button>
+                      )}
+                    </div>
+                    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {items.map(item=>(
+                        <CardItem
+                          key={item.id}
+                          item={item}
+                          onAdd={(it)=> setCart(prev=>{
+                            const f = prev.find(p=>p.id===it.id);
+                            return f ? prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p) : [...prev, {...it, qty:1}];
+                          })}
+                          isAdmin={isAdmin}
+                          onEdit={upsertItem}
+                          onDelete={removeItem}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filtered.map(item=>(
+                <CardItem
+                  key={item.id}
+                  item={item}
+                  onAdd={(it)=> setCart(prev=>{
+                    const f = prev.find(p=>p.id===it.id);
+                    return f ? prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p) : [...prev, {...it, qty:1}];
+                  })}
+                  isAdmin={isAdmin}
+                  onEdit={upsertItem}
+                  onDelete={removeItem}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Sacola + Modais */}
@@ -254,7 +288,7 @@ export default function App(){
           )}
           {showNewItem && (
             <NewItemModal
-              currentCategory={tab}
+              currentCategory={newItemCat || tab}
               categories={categories}
               onClose={()=> setShowNewItem(false)}
               onSave={(data)=>{ upsertItem(data); setShowNewItem(false); }}
@@ -302,7 +336,7 @@ function SectionTitle({ id, categories }){
     <div className="mb-2">
       <h2 className="text-2xl font-bold">{cat?.label}</h2>
       <p className="text-sm text-neutral-500">
-        {id==="principal" ? "Veja todas as opções disponíveis" : "Escolha suas opções favoritas"}
+        {id==="principal" ? "Itens organizados por sessão" : "Escolha suas opções favoritas"}
       </p>
     </div>
   );
