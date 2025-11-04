@@ -13,10 +13,11 @@ const LS = {
 
 const STORE = {
   name: "Umami Fit • Gourmet",
-  address: "Av. Exemplo, 1234",
-  city: "Sua Cidade",
-  opensAt: "10:00",
-  closesAt: "22:00",
+  address: "Santa Mônica",
+  city: "Uberlândia",
+  opensAt: "08:00",
+  closesAt: "18:00",
+  // banner único e estático
   banner:
     "https://images.unsplash.com/photo-1604908554007-43f5b2f318a6?q=80&w=2070&auto=format&fit=crop",
   // coloque a sua logo em /public/umami-logo.png
@@ -99,24 +100,6 @@ const DEFAULT_MENU = [
   },
 ];
 
-// imagens de fundo por sessão + imagem para busca
-const CATEGORY_BANNERS = {
-  marmitas:
-    "https://images.unsplash.com/photo-1551183053-bf91a1d81141?q=80&w=2000&auto=format&fit=crop",
-  bolos:
-    "https://images.unsplash.com/photo-1601979031925-424e53b6caaa?q=80&w=2000&auto=format&fit=crop",
-  trufas:
-    "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=2000&auto=format&fit=crop",
-  panquecas:
-    "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=2000&auto=format&fit=crop",
-  lasanhas:
-    "https://images.unsplash.com/photo-1541745537413-b804d1a07a23?q=80&w=2000&auto=format&fit=crop",
-  combos:
-    "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=2000&auto=format&fit=crop",
-  search:
-    "https://images.unsplash.com/photo-1493770348161-369560ae357d?q=80&w=2000&auto=format&fit=crop",
-};
-
 /** =================== HELPERS =================== **/
 const currency = (n) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -173,6 +156,9 @@ export default function App() {
   const [showNewCat, setShowNewCat] = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
 
+  // controle de prioridade: se o usuário clicar numa sessão após digitar, a seleção manual tem prioridade
+  const [manualTabPriority, setManualTabPriority] = useState(false);
+
   useEffect(() => {
     if (!Array.isArray(categories) || categories.length === 0) {
       setCategories(DEFAULT_CATEGORIES);
@@ -211,6 +197,32 @@ export default function App() {
     );
   }
 
+  // AUTO-SELEÇÃO DE SESSÃO QUANDO HOUVER BUSCA (se o usuário ainda não clicou numa aba)
+  useEffect(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      // quando a busca for limpa, a prioridade manual é liberada
+      setManualTabPriority(false);
+      return;
+    }
+    if (manualTabPriority) return; // usuário escolheu manualmente -> não forçar tab
+
+    // encontre o primeiro item que corresponde
+    const firstMatch = menu.find((i) => {
+      if (!i.available) return false;
+      const catLabel =
+        categories.find((c) => c.id === i.category)?.label?.toLowerCase() || "";
+      return (
+        (i.name || "").toLowerCase().includes(q) ||
+        (i.desc || "").toLowerCase().includes(q) ||
+        catLabel.includes(q)
+      );
+    });
+    if (firstMatch && firstMatch.category !== tab) {
+      setTab(firstMatch.category);
+    }
+  }, [query, manualTabPriority, menu, categories, tab]);
+
   // BUSCA GLOBAL (todas as sessões)
   const filtered = useMemo(() => {
     const base = menu.filter((i) => i.available);
@@ -241,14 +253,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Banner */}
+      {/* Banner estático */}
       <div className="relative h-72 overflow-hidden">
         <img
-          src={
-            query.trim()
-              ? CATEGORY_BANNERS.search
-              : CATEGORY_BANNERS[tab] || STORE.banner
-          }
+          src={STORE.banner}
           alt="banner"
           className="w-full h-full object-cover"
         />
@@ -290,7 +298,12 @@ export default function App() {
             {categories.map((c) => (
               <button
                 key={c.id}
-                onClick={() => setTab(c.id)}
+                onClick={() => {
+                  // usuário escolheu manualmente uma sessão → prioridade manual + limpar busca
+                  if (query.trim()) setQuery("");
+                  setManualTabPriority(true);
+                  setTab(c.id);
+                }}
                 className={`px-4 py-2 rounded-full text-sm whitespace-nowrap border ${
                   tab === c.id ? "bg-black text-white" : "bg-white"
                 }`}
@@ -433,7 +446,7 @@ export default function App() {
         </aside>
       </div>
 
-      {/* Rodapé (sem copiar link público) */}
+      {/* Rodapé */}
       <footer className="border-t py-6 text-center text-sm text-neutral-500">
         © {new Date().getFullYear()} {STORE.name}. Todos os direitos reservados.
       </footer>
