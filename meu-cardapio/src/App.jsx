@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 /** =================== CONFIG =================== **/
-// Troque as chaves antes de publicar (elas NÃO são segredo real no front-end)
-const ACCESS_KEY = "umami";      // público: ?access=...
-const ADMIN_KEY  = "admin";             // admin:  ?access=...&admin=...
+// chaves de acesso
+const ACCESS_KEY = "umami";   // público: ?access=umami
+const ADMIN_KEY  = "admin";   // admin:   ?access=umami&admin=admin
 
 // chaves do localStorage ISOLADAS por ACCESS_KEY (evita conflito ao trocar a chave)
 const LS = {
@@ -12,86 +12,173 @@ const LS = {
 };
 
 const STORE = {
-  name: "UMAMI - FIT E GOURMET",
-  address: "Santa Mônica",
-  city: "Uberlândia",
-  opensAt: "08:00",
-  closesAt: "18:00",
+  name: "Umami Fit • Gourmet",
+  address: "Av. Exemplo, 1234",
+  city: "Sua Cidade",
+  opensAt: "10:00",
+  closesAt: "22:00",
   banner:
     "https://images.unsplash.com/photo-1604908554007-43f5b2f318a6?q=80&w=2070&auto=format&fit=crop",
-  logo:
-    "https://images.unsplash.com/photo-1603048297172-c92544798d5a?q=80&w=300&auto=format&fit=crop",
+  // coloque a sua logo em /public/umami-logo.png
+  logo: "/umami-logo.png",
 };
 
 /** =================== BASE =================== **/
 const DEFAULT_CATEGORIES = [
-  { id: "marmitas",  label: "Marmitas" },
-  { id: "bolos",     label: "Bolos de pote" },
-  { id: "trufas",    label: "Trufas" },
+  { id: "marmitas", label: "Marmitas" },
+  { id: "bolos", label: "Bolos de pote" },
+  { id: "trufas", label: "Trufas" },
   { id: "panquecas", label: "Panquecas" },
-  { id: "lasanhas",  label: "Lasanhas" },
-  { id: "combos",    label: "Combos promocionais" },
+  { id: "lasanhas", label: "Lasanhas" },
+  { id: "combos", label: "Combos promocionais" },
 ];
 
 const DEFAULT_MENU = [
-  { id:"m1", category:"marmitas", name:"Marmita Fit (350g)", desc:"Arroz integral, frango grelhado, legumes no vapor.", price:22.9, img:"https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=1974&auto=format&fit=crop", available:true },
-  { id:"m2", category:"marmitas", name:"Marmita Tradicional (500g)", desc:"Arroz, feijão, bife acebolado e salada.", price:24.9, img:"https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=1974&auto=format&fit=crop", available:true },
-  { id:"b1", category:"bolos", name:"Bolo de pote Ninho com morango", desc:"Creme de ninho com camadas de morango.", price:11.9, img:"https://images.unsplash.com/photo-1607920591413-6b7224c162b2?q=80&w=1974&auto=format&fit=crop", available:true },
-  { id:"t1", category:"trufas", name:"Trufa tradicional", desc:"Chocolate ao leite recheado.", price:4.5, img:"https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=1936&auto=format&fit=crop", available:true },
-  { id:"p1", category:"panquecas", name:"Panqueca de carne", desc:"Molho de tomate artesanal e queijo gratinado.", price:19.9, img:"https://images.unsplash.com/photo-1528731708534-816fe59f90cb?q=80&w=1974&auto=format&fit=crop", available:true },
-  { id:"l1", category:"lasanhas", name:"Lasanha à bolonhesa", desc:"Massa fresca, molho bolonhesa e queijo mussarela.", price:34.9, img:"https://images.unsplash.com/photo-1625944527181-4b2f35a1819d?q=80&w=1974&auto=format&fit=crop", available:true },
-  { id:"c1", category:"combos", name:"Combo da Semana", desc:"2 marmitas + 2 bolos de pote.", price:69.9, img:"https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1974&auto=format&fit=crop", available:true },
+  {
+    id: "m1",
+    category: "marmitas",
+    name: "Marmita Fit (350g)",
+    desc: "Arroz integral, frango grelhado, legumes no vapor.",
+    price: 22.9,
+    img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=1974&auto=format&fit=crop",
+    available: true,
+  },
+  {
+    id: "m2",
+    category: "marmitas",
+    name: "Marmita Tradicional (500g)",
+    desc: "Arroz, feijão, bife acebolado e salada.",
+    price: 24.9,
+    img: "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=1974&auto=format&fit=crop",
+    available: true,
+  },
+  {
+    id: "b1",
+    category: "bolos",
+    name: "Bolo de pote Ninho com morango",
+    desc: "Creme de ninho com camadas de morango.",
+    price: 11.9,
+    img: "https://images.unsplash.com/photo-1607920591413-6b7224c162b2?q=80&w=1974&auto=format&fit=crop",
+    available: true,
+  },
+  {
+    id: "t1",
+    category: "trufas",
+    name: "Trufa tradicional",
+    desc: "Chocolate ao leite recheado.",
+    price: 4.5,
+    img: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=1936&auto=format&fit=crop",
+    available: true,
+  },
+  {
+    id: "p1",
+    category: "panquecas",
+    name: "Panqueca de carne",
+    desc: "Molho de tomate artesanal e queijo gratinado.",
+    price: 19.9,
+    img: "https://images.unsplash.com/photo-1528731708534-816fe59f90cb?q=80&w=1974&auto=format&fit=crop",
+    available: true,
+  },
+  {
+    id: "l1",
+    category: "lasanhas",
+    name: "Lasanha à bolonhesa",
+    desc: "Massa fresca, molho bolonhesa e queijo mussarela.",
+    price: 34.9,
+    img: "https://images.unsplash.com/photo-1625944527181-4b2f35a1819d?q=80&w=1974&auto=format&fit=crop",
+    available: true,
+  },
+  {
+    id: "c1",
+    category: "combos",
+    name: "Combo da Semana",
+    desc: "2 marmitas + 2 bolos de pote.",
+    price: 69.9,
+    img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1974&auto=format&fit=crop",
+    available: true,
+  },
 ];
 
+// imagens de fundo por sessão + imagem para busca
+const CATEGORY_BANNERS = {
+  marmitas:
+    "https://images.unsplash.com/photo-1551183053-bf91a1d81141?q=80&w=2000&auto=format&fit=crop",
+  bolos:
+    "https://images.unsplash.com/photo-1601979031925-424e53b6caaa?q=80&w=2000&auto=format&fit=crop",
+  trufas:
+    "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=2000&auto=format&fit=crop",
+  panquecas:
+    "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=2000&auto=format&fit=crop",
+  lasanhas:
+    "https://images.unsplash.com/photo-1541745537413-b804d1a07a23?q=80&w=2000&auto=format&fit=crop",
+  combos:
+    "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=2000&auto=format&fit=crop",
+  search:
+    "https://images.unsplash.com/photo-1493770348161-369560ae357d?q=80&w=2000&auto=format&fit=crop",
+};
+
 /** =================== HELPERS =================== **/
-const currency = (n) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const getParam = (k) => { try { return new URL(window.location.href).searchParams.get(k); } catch { return null; } };
-const slugify = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+const currency = (n) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const getParam = (k) => {
+  try {
+    return new URL(window.location.href).searchParams.get(k);
+  } catch {
+    return null;
+  }
+};
+const slugify = (t) =>
+  t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 
 function safeLoad(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
     const val = JSON.parse(raw);
-    // validações mínimas
     if (Array.isArray(fallback) && !Array.isArray(val)) return fallback;
     return val ?? fallback;
   } catch {
-    return fallback; // se der erro no JSON, usa fallback
+    return fallback;
   }
 }
-
 function safeSave(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // storage cheio ou bloqueado — silenciosamente ignora
+    // storage cheio/bloqueado: ignore
   }
 }
 
 /** =================== APP =================== **/
 export default function App() {
   const hasAccess = getParam("access") === ACCESS_KEY;
-  const isAdmin   = hasAccess && getParam("admin") === ADMIN_KEY;
+  const isAdmin = hasAccess && getParam("admin") === ADMIN_KEY;
 
-  // Carrega estado com proteção e isolamento por ACCESS_KEY
-  const [categories, setCategories] = useState(() => safeLoad(LS.cats(ACCESS_KEY), DEFAULT_CATEGORIES));
-  const [menu, setMenu]             = useState(() => safeLoad(LS.menu(ACCESS_KEY), DEFAULT_MENU));
-  const [tab, setTab]               = useState(() => (categories[0]?.id || "marmitas"));
-  const [query, setQuery]           = useState("");
-  const [cart, setCart]             = useState([]);
-  // Popups de criação
-  const [showNewCat,  setShowNewCat]  = useState(false);
+  const [categories, setCategories] = useState(() =>
+    safeLoad(LS.cats(ACCESS_KEY), DEFAULT_CATEGORIES)
+  );
+  const [menu, setMenu] = useState(() =>
+    safeLoad(LS.menu(ACCESS_KEY), DEFAULT_MENU)
+  );
+  const [tab, setTab] = useState(() => categories[0]?.id || "marmitas");
+  const [query, setQuery] = useState("");
+  const [cart, setCart] = useState([]);
+
+  // popups
+  const [showNewCat, setShowNewCat] = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
 
-  // Se categorias carregadas estiverem vazias/invalidas, restaura padrão
   useEffect(() => {
     if (!Array.isArray(categories) || categories.length === 0) {
       setCategories(DEFAULT_CATEGORIES);
     }
   }, [categories]);
 
-  // Se tab não existir mais, selecione a primeira
   useEffect(() => {
     if (!categories.find((c) => c.id === tab)) {
       const first = categories[0]?.id || "marmitas";
@@ -99,51 +186,89 @@ export default function App() {
     }
   }, [categories, tab]);
 
-  // Persistência segura
-  useEffect(() => { safeSave(LS.cats(ACCESS_KEY), categories); }, [categories]);
-  useEffect(() => { safeSave(LS.menu(ACCESS_KEY), menu); }, [menu]);
+  useEffect(() => {
+    safeSave(LS.cats(ACCESS_KEY), categories);
+  }, [categories]);
+  useEffect(() => {
+    safeSave(LS.menu(ACCESS_KEY), menu);
+  }, [menu]);
 
   if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-100">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
           <h1 className="text-2xl font-bold mb-2">Acesso restrito</h1>
-          <p className="text-neutral-600 mb-6">Este cardápio é privado. Solicite o <b>link de acesso</b> ao estabelecimento.</p>
-          <p className="text-sm text-neutral-500">Dica (dev): use <code>?access={ACCESS_KEY}</code> no URL. Admin usa link separado.</p>
+          <p className="text-neutral-600 mb-6">
+            Este cardápio é privado. Solicite o <b>link de acesso</b> ao
+            estabelecimento.
+          </p>
+          <p className="text-sm text-neutral-500">
+            Dica (dev): use <code>?access={ACCESS_KEY}</code> no URL. Admin usa
+            link separado.
+          </p>
         </div>
       </div>
     );
   }
 
-  const filtered = useMemo(() =>
-    menu.filter((i) =>
-      i.category === tab && i.available && (
-        (i.name || "").toLowerCase().includes(query.toLowerCase()) ||
-        (i.desc || "").toLowerCase().includes(query.toLowerCase())
-      )
-    )
-  , [menu, tab, query]);
+  // BUSCA GLOBAL (todas as sessões)
+  const filtered = useMemo(() => {
+    const base = menu.filter((i) => i.available);
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      return base.filter((i) => i.category === tab);
+    }
+    return base.filter((i) => {
+      const catLabel =
+        categories.find((c) => c.id === i.category)?.label?.toLowerCase() || "";
+      return (
+        (i.name || "").toLowerCase().includes(q) ||
+        (i.desc || "").toLowerCase().includes(q) ||
+        catLabel.includes(q)
+      );
+    });
+  }, [menu, tab, query, categories]);
 
   const subtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
-
   const upsertItem = (item) =>
-    setMenu((prev) => (prev.some((p) => p.id === item.id) ? prev.map((p) => (p.id === item.id ? item : p)) : [...prev, item]));
-  const removeItem = (id) => setMenu((prev) => prev.filter((p) => p.id !== id));
+    setMenu((prev) =>
+      prev.some((p) => p.id === item.id)
+        ? prev.map((p) => (p.id === item.id ? item : p))
+        : [...prev, item]
+    );
+  const removeItem = (id) =>
+    setMenu((prev) => prev.filter((p) => p.id !== id));
 
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Banner */}
       <div className="relative h-72 overflow-hidden">
-        <img src={STORE.banner} alt="banner" className="w-full h-full object-cover" />
+        <img
+          src={
+            query.trim()
+              ? CATEGORY_BANNERS.search
+              : CATEGORY_BANNERS[tab] || STORE.banner
+          }
+          alt="banner"
+          className="w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-black/40" />
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl mx-auto w-full px-4 pb-6">
             <div className="flex items-center gap-4">
-              <img src={STORE.logo} alt="logo" className="w-20 h-20 rounded-full ring-4 ring-white object-cover" />
+              <img
+                src={STORE.logo}
+                alt="logo"
+                className="w-20 h-20 rounded-full ring-4 ring-white object-cover bg-white"
+              />
               <div>
                 <h1 className="text-white text-2xl font-bold">{STORE.name}</h1>
-                <p className="text-white/90 text-sm">{STORE.address} • {STORE.city}</p>
-                <p className="text-white/80 text-xs">Hoje: {STORE.opensAt} – {STORE.closesAt}</p>
+                <p className="text-white/90 text-sm">
+                  {STORE.address} • {STORE.city}
+                </p>
+                <p className="text-white/80 text-xs">
+                  Hoje: {STORE.opensAt} – {STORE.closesAt}
+                </p>
               </div>
             </div>
           </div>
@@ -154,7 +279,7 @@ export default function App() {
       <div className="sticky top-0 z-30 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <input
-            placeholder="Buscar no cardápio"
+            placeholder="Buscar no cardápio (todas as sessões)"
             className="flex-1 rounded-full border px-4 py-2 focus:outline-none"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -189,8 +314,13 @@ export default function App() {
       {/* Conteúdo */}
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <SectionTitle id={tab} categories={categories} />
-          {isAdmin && (
+          {query.trim() ? (
+            <SearchTitle query={query} count={filtered.length} />
+          ) : (
+            <SectionTitle id={tab} categories={categories} />
+          )}
+
+          {!query.trim() && isAdmin && (
             <button
               className="mb-4 px-3 py-2 rounded-full border"
               title="Adicionar item nesta sessão"
@@ -199,6 +329,7 @@ export default function App() {
               +
             </button>
           )}
+
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {filtered.map((item) => (
               <CardItem
@@ -208,7 +339,9 @@ export default function App() {
                   setCart((prev) => {
                     const f = prev.find((p) => p.id === it.id);
                     return f
-                      ? prev.map((p) => (p.id === it.id ? { ...p, qty: p.qty + 1 } : p))
+                      ? prev.map((p) =>
+                          p.id === it.id ? { ...p, qty: p.qty + 1 } : p
+                        )
                       : [...prev, { ...it, qty: 1 }];
                   })
                 }
@@ -252,7 +385,9 @@ export default function App() {
                 <div key={it.id} className="flex items-center justify-between gap-3">
                   <div>
                     <div className="font-medium text-sm">{it.name}</div>
-                    <div className="text-xs text-neutral-500">{currency(it.price)} x {it.qty}</div>
+                    <div className="text-xs text-neutral-500">
+                      {currency(it.price)} x {it.qty}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -260,7 +395,11 @@ export default function App() {
                       onClick={() =>
                         setCart((prev) =>
                           prev
-                            .map((p) => (p.id === it.id ? { ...p, qty: Math.max(0, p.qty - 1) } : p))
+                            .map((p) =>
+                              p.id === it.id
+                                ? { ...p, qty: Math.max(0, p.qty - 1) }
+                                : p
+                            )
                             .filter((p) => p.qty > 0)
                         )
                       }
@@ -270,7 +409,11 @@ export default function App() {
                     <button
                       className="px-2 py-1 border rounded-full"
                       onClick={() =>
-                        setCart((prev) => prev.map((p) => (p.id === it.id ? { ...p, qty: p.qty + 1 } : p)))
+                        setCart((prev) =>
+                          prev.map((p) =>
+                            p.id === it.id ? { ...p, qty: p.qty + 1 } : p
+                          )
+                        )
                       }
                     >
                       +
@@ -290,10 +433,9 @@ export default function App() {
         </aside>
       </div>
 
-      {/* Rodapé */}
+      {/* Rodapé (sem copiar link público) */}
       <footer className="border-t py-6 text-center text-sm text-neutral-500">
         © {new Date().getFullYear()} {STORE.name}. Todos os direitos reservados.
-        <ShareLinks />
       </footer>
     </div>
   );
@@ -306,6 +448,14 @@ function SectionTitle({ id, categories }) {
     <div className="mb-2">
       <h2 className="text-2xl font-bold">{cat?.label}</h2>
       <p className="text-sm text-neutral-500">Escolha suas opções favoritas</p>
+    </div>
+  );
+}
+function SearchTitle({ query, count }) {
+  return (
+    <div className="mb-2">
+      <h2 className="text-2xl font-bold">Resultados para “{query}”</h2>
+      <p className="text-sm text-neutral-500">{count} item(ns) encontrados</p>
     </div>
   );
 }
@@ -325,7 +475,9 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }) {
           </div>
           <p className="text-sm text-neutral-600 mt-1 line-clamp-3">{item.desc}</p>
           {!item.available && (
-            <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-neutral-100">Indisponível</span>
+            <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-neutral-100">
+              Indisponível
+            </span>
           )}
         </div>
         <div className="mt-3 flex items-center gap-2">
@@ -341,13 +493,18 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }) {
               <button className="px-3 py-2 rounded-xl border" onClick={() => setEditing(true)}>
                 Editar
               </button>
-              <button className="px-3 py-2 rounded-xl border" onClick={() => onDelete(item.id)} title="Remover">
+              <button
+                className="px-3 py-2 rounded-xl border"
+                onClick={() => onDelete(item.id)}
+                title="Remover"
+              >
                 🗑️
               </button>
             </>
           )}
         </div>
       </div>
+
       {editing && (
         <EditModal
           item={item}
@@ -371,26 +528,54 @@ function EditModal({ item, onClose, onSave }) {
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm">
             <span className="text-neutral-500">Nome</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
           </label>
           <label className="text-sm">
             <span className="text-neutral-500">Preço</span>
-            <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value || 0) })} />
+            <input
+              type="number"
+              step="0.01"
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.price}
+              onChange={(e) =>
+                setForm({ ...form, price: parseFloat(e.target.value || 0) })
+              }
+            />
           </label>
           <label className="text-sm col-span-2">
             <span className="text-neutral-500">Descrição</span>
-            <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
+            <textarea
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.desc}
+              onChange={(e) => setForm({ ...form, desc: e.target.value })}
+            />
           </label>
           <label className="text-sm col-span-2">
             <span className="text-neutral-500">URL da imagem</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={(e) => setForm({ ...form, img: e.target.value })} />
+            <input
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.img}
+              onChange={(e) => setForm({ ...form, img: e.target.value })}
+            />
           </label>
           <label className="text-sm">
             <span className="text-neutral-500">Categoria</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            <input
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            />
           </label>
           <label className="text-sm flex items-end gap-2">
-            <input type="checkbox" checked={form.available} onChange={(e) => setForm({ ...form, available: e.target.checked })} />
+            <input
+              type="checkbox"
+              checked={form.available}
+              onChange={(e) => setForm({ ...form, available: e.target.checked })}
+            />
             Disponível
           </label>
         </div>
@@ -398,7 +583,10 @@ function EditModal({ item, onClose, onSave }) {
           <button className="px-4 py-2 rounded-xl border" onClick={onClose}>
             Cancelar
           </button>
-          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={() => onSave(form)}>
+          <button
+            className="px-4 py-2 rounded-xl bg-black text-white"
+            onClick={() => onSave(form)}
+          >
             Salvar
           </button>
         </div>
@@ -419,11 +607,21 @@ function NewCategoryModal({ categories, setCategories, onClose, setTab }) {
         <h3 className="text-lg font-semibold">Criar nova sessão</h3>
         <label className="text-sm">
           <span className="text-neutral-500">Nome da sessão</span>
-          <input className="w-full border rounded-xl px-3 py-2" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex.: Sobremesas" />
+          <input
+            className="w-full border rounded-xl px-3 py-2"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Ex.: Sobremesas"
+          />
         </label>
         <label className="text-sm">
           <span className="text-neutral-500">ID (slug)</span>
-          <input className="w-full border rounded-xl px-3 py-2" value={id} onChange={(e) => setId(slugify(e.target.value))} placeholder="ex.: sobremesas" />
+          <input
+            className="w-full border rounded-xl px-3 py-2"
+            value={id}
+            onChange={(e) => setId(slugify(e.target.value))}
+            placeholder="ex.: sobremesas"
+          />
         </label>
 
         <div className="pt-2 flex items-center justify-end gap-2">
@@ -434,7 +632,8 @@ function NewCategoryModal({ categories, setCategories, onClose, setTab }) {
             className="px-4 py-2 rounded-xl bg-black text-white"
             onClick={() => {
               if (!label || !id) return alert("Preencha nome e id.");
-              if (categories.some((c) => c.id === id)) return alert("Já existe uma sessão com esse ID.");
+              if (categories.some((c) => c.id === id))
+                return alert("Já existe uma sessão com esse ID.");
               const next = [...categories, { id, label }];
               setCategories(next);
               setTab(id);
@@ -462,26 +661,54 @@ function NewItemModal({ currentCategory, categories, onClose, onSave }) {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3">
-        <h3 className="text-lg font-semibold">Novo item ({categories.find((c) => c.id === currentCategory)?.label})</h3>
+        <h3 className="text-lg font-semibold">
+          Novo item ({categories.find((c) => c.id === currentCategory)?.label})
+        </h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm">
             <span className="text-neutral-500">Nome</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
           </label>
           <label className="text-sm">
             <span className="text-neutral-500">Preço</span>
-            <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value || 0) })} />
+            <input
+              type="number"
+              step="0.01"
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.price}
+              onChange={(e) =>
+                setForm({ ...form, price: parseFloat(e.target.value || 0) })
+              }
+            />
           </label>
           <label className="text-sm col-span-2">
             <span className="text-neutral-500">Descrição</span>
-            <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
+            <textarea
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.desc}
+              onChange={(e) => setForm({ ...form, desc: e.target.value })}
+            />
           </label>
           <label className="text-sm col-span-2">
             <span className="text-neutral-500">URL da imagem</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={(e) => setForm({ ...form, img: e.target.value })} />
+            <input
+              className="w-full border rounded-xl px-3 py-2"
+              value={form.img}
+              onChange={(e) => setForm({ ...form, img: e.target.value })}
+            />
           </label>
           <label className="text-sm flex items-end gap-2">
-            <input type="checkbox" checked={form.available} onChange={(e) => setForm({ ...form, available: e.target.checked })} />
+            <input
+              type="checkbox"
+              checked={form.available}
+              onChange={(e) =>
+                setForm({ ...form, available: e.target.checked })
+              }
+            />
             Disponível
           </label>
         </div>
@@ -489,40 +716,14 @@ function NewItemModal({ currentCategory, categories, onClose, onSave }) {
           <button className="px-4 py-2 rounded-xl border" onClick={onClose}>
             Cancelar
           </button>
-          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={() => onSave(form)}>
+          <button
+            className="px-4 py-2 rounded-xl bg-black text-white"
+            onClick={() => onSave(form)}
+          >
             Adicionar
           </button>
         </div>
       </div>
     </div>
-  );
-}
-
-function ShareLinks() {
-  const base = `${window.location.origin}${window.location.pathname}`;
-  const publicUrl = `${base}?access=${ACCESS_KEY}`;
-  return (
-    <div className="mt-3 flex items-center gap-3 justify-center">
-      <CopyButton label="Copiar link público" text={publicUrl} />
-    </div>
-  );
-}
-
-function CopyButton({ label, text }) {
-  return (
-    <button
-      className="px-3 py-2 rounded-xl border text-xs"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          alert("Link copiado!\n" + text);
-        } catch {
-          // fallback
-          prompt("Copie o link:", text);
-        }
-      }}
-    >
-      {label}
-    </button>
   );
 }
