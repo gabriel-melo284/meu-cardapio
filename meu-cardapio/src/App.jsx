@@ -1,24 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-// =================== CONFIGURAÇÕES ===================
-// Altere as chaves abaixo para os seus links de acesso
-const ACCESS_KEY = "meu-link-secreto"; // público só entra com ?access=meu-link-secreto
-const ADMIN_KEY = "admin"; // senha do administrador (não compartilhar publicamente). O login de admin é feito por formulário, não por parâmetro na URL.
+// =================== CONFIG ===================
+// Troque por chaves fortes antes de divulgar
+const ACCESS_KEY = "meu-link-secreto"; // público acessa com ?access=...
+const ADMIN_KEY  = "admin-123";       // admin acessa SOMENTE com &admin=...
 
-// Nome e informações do seu estabelecimento
 const STORE = {
   name: "SABOR & CIA",
   address: "Av. Exemplo, 1234",
   city: "Sua Cidade",
-  banner:
-    "https://images.unsplash.com/photo-1604908554007-43f5b2f318a6?q=80&w=2070&auto=format&fit=crop",
-  logo: "https://images.unsplash.com/photo-1603048297172-c92544798d5a?q=80&w=300&auto=format&fit=crop",
   opensAt: "10:00",
   closesAt: "22:00",
+  banner:
+    "https://images.unsplash.com/photo-1604908554007-43f5b2f318a6?q=80&w=2070&auto=format&fit=crop",
+  logo:
+    "https://images.unsplash.com/photo-1603048297172-c92544798d5a?q=80&w=300&auto=format&fit=crop",
 };
 
-// =================== TIPOS ===================
-const CATEGORIES = [
+// =================== CATEGORIAS (dinâmico) ===================
+const DEFAULT_CATEGORIES = [
   { id: "marmitas", label: "Marmitas" },
   { id: "bolos", label: "Bolos de pote" },
   { id: "trufas", label: "Trufas" },
@@ -27,170 +27,78 @@ const CATEGORIES = [
   { id: "combos", label: "Combos promocionais" },
 ];
 
-function currency(n) {
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-function getQueryParam(name) {
-  const url = new URL(window.location.href);
-  return url.searchParams.get(name);
-}
-
-// =================== MOCK INICIAL ===================
+// =================== MENU INICIAL ===================
 const DEFAULT_MENU = [
-  {
-    id: "m1",
-    category: "marmitas",
-    name: "Marmita Fit (350g)",
-    desc: "Arroz integral, frango grelhado, legumes no vapor.",
-    price: 22.9,
-    img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=1974&auto=format&fit=crop",
-    available: true,
-  },
-  {
-    id: "m2",
-    category: "marmitas",
-    name: "Marmita Tradicional (500g)",
-    desc: "Arroz, feijão, bife acebolado e salada.",
-    price: 24.9,
-    img: "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=1974&auto=format&fit=crop",
-    available: true,
-  },
-  {
-    id: "b1",
-    category: "bolos",
-    name: "Bolo de pote Ninho com morango",
-    desc: "Creme de ninho com camadas de morango.",
-    price: 11.9,
-    img: "https://images.unsplash.com/photo-1607920591413-6b7224c162b2?q=80&w=1974&auto=format&fit=crop",
-    available: true,
-  },
-  {
-    id: "t1",
-    category: "trufas",
-    name: "Trufa tradicional",
-    desc: "Chocolate ao leite recheado.",
-    price: 4.5,
-    img: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=1936&auto=format&fit=crop",
-    available: true,
-  },
-  {
-    id: "p1",
-    category: "panquecas",
-    name: "Panqueca de carne",
-    desc: "Molho de tomate artesanal e queijo gratinado.",
-    price: 19.9,
-    img: "https://images.unsplash.com/photo-1528731708534-816fe59f90cb?q=80&w=1974&auto=format&fit=crop",
-    available: true,
-  },
-  {
-    id: "l1",
-    category: "lasanhas",
-    name: "Lasanha à bolonhesa",
-    desc: "Massa fresca, molho bolonhesa e queijo mussarela.",
-    price: 34.9,
-    img: "https://images.unsplash.com/photo-1625944527181-4b2f35a1819d?q=80&w=1974&auto=format&fit=crop",
-    available: true,
-  },
-  {
-    id: "c1",
-    category: "combos",
-    name: "Combo da Semana",
-    desc: "2 marmitas + 2 bolos de pote.",
-    price: 69.9,
-    img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1974&auto=format&fit=crop",
-    available: true,
-  },
+  { id: "m1", category: "marmitas", name: "Marmita Fit (350g)", desc: "Arroz integral, frango grelhado, legumes no vapor.", price: 22.9, img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=1974&auto=format&fit=crop", available: true },
+  { id: "m2", category: "marmitas", name: "Marmita Tradicional (500g)", desc: "Arroz, feijão, bife acebolado e salada.", price: 24.9, img: "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=1974&auto=format&fit=crop", available: true },
+  { id: "b1", category: "bolos", name: "Bolo de pote Ninho com morango", desc: "Creme de ninho com camadas de morango.", price: 11.9, img: "https://images.unsplash.com/photo-1607920591413-6b7224c162b2?q=80&w=1974&auto=format&fit=crop", available: true },
+  { id: "t1", category: "trufas", name: "Trufa tradicional", desc: "Chocolate ao leite recheado.", price: 4.5, img: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=1936&auto=format&fit=crop", available: true },
+  { id: "p1", category: "panquecas", name: "Panqueca de carne", desc: "Molho de tomate artesanal e queijo gratinado.", price: 19.9, img: "https://images.unsplash.com/photo-1528731708534-816fe59f90cb?q=80&w=1974&auto=format&fit=crop", available: true },
+  { id: "l1", category: "lasanhas", name: "Lasanha à bolonhesa", desc: "Massa fresca, molho bolonhesa e queijo mussarela.", price: 34.9, img: "https://images.unsplash.com/photo-1625944527181-4b2f35a1819d?q=80&w=1974&auto=format&fit=crop", available: true },
+  { id: "c1", category: "combos", name: "Combo da Semana", desc: "2 marmitas + 2 bolos de pote.", price: 69.9, img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1974&auto=format&fit=crop", available: true },
 ];
 
-// =================== COMPONENTE PRINCIPAL ===================
-export default function App() {
-  const hasAccess = getQueryParam("access") === ACCESS_KEY;
-  // Admin agora faz login via formulário seguro no cliente (sessionStorage). Isto evita expor a senha no link.
-  const [isAdmin, setIsAdmin] = useState(() => sessionStorage.getItem("isAdmin") === "1");
+// =================== HELPERS ===================
+function currency(n){ return n.toLocaleString("pt-BR",{style:"currency", currency:"BRL"}); }
+function getParam(k){ try{ return new URL(window.location.href).searchParams.get(k);}catch{ return null; } }
+function slugify(text){
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
 
-  // função para tentar login de administrador
-  function tryAdminLogin(password) {
-    if (password === ADMIN_KEY) {
-      sessionStorage.setItem("isAdmin", "1");
-      setIsAdmin(true);
-      return true;
-    }
-    return false;
-  }
+// =================== APP ===================
+export default function App(){
+  const hasAccess = getParam("access") === ACCESS_KEY;
+  // Admin SOMENTE pelo link dedicado (?access=...&admin=...)
+  const isAdmin  = hasAccess && getParam("admin") === ADMIN_KEY;
 
-  // Carrega / persiste menu no localStorage
-  const [menu, setMenu] = useState(() => {
-    const saved = localStorage.getItem("menu-data");
-    return saved ? JSON.parse(saved) : DEFAULT_MENU;
-  });
-  useEffect(() => {
-    localStorage.setItem("menu-data", JSON.stringify(menu));
-  }, [menu]);
+  // Estado e persistência
+  const [categories, setCategories] = useState(() => JSON.parse(localStorage.getItem("categories-data")||"null") || DEFAULT_CATEGORIES);
+  const [menu, setMenu]           = useState(() => JSON.parse(localStorage.getItem("menu-data")||"null") || DEFAULT_MENU);
+  const [tab, setTab]             = useState(() => ( (JSON.parse(localStorage.getItem("categories-data")||"null")||DEFAULT_CATEGORIES)[0]?.id || "marmitas"));
+  const [cart, setCart]           = useState([]);
+  const [query, setQuery]         = useState("");
 
-  const [tab, setTab] = useState(CATEGORIES[0].id);
-  const [cart, setCart] = useState([]);
-  const [query, setQuery] = useState("");
+  useEffect(()=>localStorage.setItem("menu-data", JSON.stringify(menu)),[menu]);
+  useEffect(()=>localStorage.setItem("categories-data", JSON.stringify(categories)),[categories]);
 
-  const filtered = useMemo(() => {
-    return menu.filter(
-      (i) =>
-        i.category === tab &&
-        i.available &&
-        (i.name.toLowerCase().includes(query.toLowerCase()) ||
-          i.desc.toLowerCase().includes(query.toLowerCase()))
-    );
-  }, [menu, tab, query]);
-
-  const subtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
-
-  // CRUD (apenas admin)
-  function upsertItem(item) {
-    setMenu((prev) => {
-      const exists = prev.some((p) => p.id === item.id);
-      const updated = exists ? prev.map((p) => (p.id === item.id ? item : p)) : [...prev, item];
-      return updated;
-    });
-  }
-  function removeItem(id) {
-    setMenu((prev) => prev.filter((p) => p.id !== id));
-  }
-
-  if (!hasAccess) {
+  if(!hasAccess){
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-100">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
           <h1 className="text-2xl font-bold mb-2">Acesso restrito</h1>
-          <p className="text-neutral-600 mb-6">
-            Este cardápio é privado. Solicite o <b>link de acesso</b> ao estabelecimento.
-          </p>
-          <p className="text-sm text-neutral-500">
-            Dica (dev): use <code>?access={ACCESS_KEY}</code> no URL. O acesso de administrador agora é feito via senha no próprio site.
-          </p>
+          <p className="text-neutral-600 mb-6">Este cardápio é privado. Solicite o <b>link de acesso</b> ao estabelecimento.</p>
+          <p className="text-sm text-neutral-500">Dica (dev): use <code>?access={ACCESS_KEY}</code> no URL. O administrador agora usa link separado.</p>
         </div>
       </div>
     );
   }
 
+  const filtered = useMemo(()=>
+    menu.filter(i=> i.category===tab && i.available && (
+      i.name.toLowerCase().includes(query.toLowerCase()) ||
+      i.desc.toLowerCase().includes(query.toLowerCase())
+    ))
+  ,[menu,tab,query]);
+
+  const subtotal = cart.reduce((s, it)=> s + it.price*it.qty, 0);
+
+  // CRUD itens
+  const upsertItem = (item)=> setMenu(prev=> prev.some(p=>p.id===item.id) ? prev.map(p=>p.id===item.id?item:p) : [...prev,item]);
+  const removeItem = (id)=> setMenu(prev=> prev.filter(p=>p.id!==id));
+
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Header/banner no estilo iFood */}
+      {/* Banner */}
       <div className="relative h-72 overflow-hidden">
-        <img src={STORE.banner} alt="banner" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/40" />
+        <img src={STORE.banner} alt="banner" className="w-full h-full object-cover"/>
+        <div className="absolute inset-0 bg-black/40"/>
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl mx-auto w-full px-4 pb-6">
             <div className="flex items-center gap-4">
-              <img
-                src={STORE.logo}
-                alt="logo"
-                className="w-20 h-20 rounded-full ring-4 ring-white object-cover"
-              />
+              <img src={STORE.logo} alt="logo" className="w-20 h-20 rounded-full ring-4 ring-white object-cover"/>
               <div>
                 <h1 className="text-white text-2xl font-bold">{STORE.name}</h1>
-                <p className="text-white/90 text-sm">
-                  {STORE.address} • {STORE.city}
-                </p>
+                <p className="text-white/90 text-sm">{STORE.address} • {STORE.city}</p>
                 <p className="text-white/80 text-xs">Hoje: {STORE.opensAt} – {STORE.closesAt}</p>
               </div>
             </div>
@@ -198,40 +106,19 @@ export default function App() {
         </div>
       </div>
 
-      {/* Barra de busca + ações */}
+      {/* Top bar */}
       <div className="sticky top-0 z-30 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <input
-            placeholder="Buscar no cardápio"
-            className="flex-1 rounded-full border px-4 py-2 focus:outline-none"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <input placeholder="Buscar no cardápio" className="flex-1 rounded-full border px-4 py-2 focus:outline-none" value={query} onChange={(e)=>setQuery(e.target.value)} />
+          {/* Sem botão de admin no público */}
           {isAdmin ? (
-            <AdminActions menu={menu} setMenu={setMenu} />
-          ) : (
-            <button
-              className="px-4 py-2 rounded-full border"
-              onClick={() => {
-                const pass = prompt("Senha do administrador:");
-                if (!pass || !tryAdminLogin(pass)) alert("Senha incorreta");
-              }}
-            >
-              Entrar como admin
-            </button>
-          )}
+            <AdminActions menu={menu} setMenu={setMenu} categories={categories} setCategories={setCategories} />
+          ) : null}
         </div>
-        {/* Abas de categorias */}
         <div className="max-w-7xl mx-auto px-4 pb-3 overflow-x-auto">
           <div className="flex gap-4">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setTab(c.id)}
-                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap border ${
-                  tab === c.id ? "bg-black text-white" : "bg-white"
-                }`}
-              >
+            {categories.map(c=> (
+              <button key={c.id} onClick={()=>setTab(c.id)} className={`px-4 py-2 rounded-full text-sm whitespace-nowrap border ${tab===c.id?"bg-black text-white":"bg-white"}`}>
                 {c.label}
               </button>
             ))}
@@ -239,74 +126,43 @@ export default function App() {
         </div>
       </div>
 
-      {/* Conteúdo principal (lista + sacola) */}
+      {/* Conteúdo */}
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <SectionTitle id={tab} />
+          <SectionTitle id={tab} categories={categories}/>
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map((item) => (
-              <CardItem
-                key={item.id}
-                item={item}
-                onAdd={(it) =>
-                  setCart((prev) => {
-                    const found = prev.find((p) => p.id === it.id);
-                    if (found) return prev.map((p) => (p.id === it.id ? { ...p, qty: p.qty + 1 } : p));
-                    return [...prev, { ...it, qty: 1 }];
-                  })
-                }
-                isAdmin={isAdmin}
-                onEdit={upsertItem}
-                onDelete={removeItem}
-              />)
-            )}
+            {filtered.map(item=> (
+              <CardItem key={item.id} item={item}
+                onAdd={(it)=> setCart(prev=>{ const f=prev.find(p=>p.id===it.id); return f? prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p):[...prev,{...it,qty:1}]})}
+                isAdmin={isAdmin} onEdit={upsertItem} onDelete={removeItem}
+              />
+            ))}
           </div>
         </div>
 
         {/* Sacola */}
         <aside className="bg-white rounded-2xl shadow-sm p-4 h-max sticky top-28">
           <h3 className="font-semibold text-lg mb-3">Sua sacola</h3>
-          {cart.length === 0 ? (
+          {cart.length===0? (
             <div className="text-center text-neutral-500 py-10">Sacola vazia</div>
-          ) : (
+          ):(
             <div className="space-y-3">
-              {cart.map((it) => (
+              {cart.map(it=> (
                 <div key={it.id} className="flex items-center justify-between gap-3">
                   <div>
                     <div className="font-medium text-sm">{it.name}</div>
                     <div className="text-xs text-neutral-500">{currency(it.price)} x {it.qty}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      className="px-2 py-1 border rounded-full"
-                      onClick={() =>
-                        setCart((prev) =>
-                          prev
-                            .map((p) => (p.id === it.id ? { ...p, qty: Math.max(0, p.qty - 1) } : p))
-                            .filter((p) => p.qty > 0)
-                        )
-                      }
-                    >
-                      −
-                    </button>
-                    <button
-                      className="px-2 py-1 border rounded-full"
-                      onClick={() =>
-                        setCart((prev) => prev.map((p) => (p.id === it.id ? { ...p, qty: p.qty + 1 } : p)))
-                      }
-                    >
-                      +
-                    </button>
+                    <button className="px-2 py-1 border rounded-full" onClick={()=> setCart(prev=> prev.map(p=>p.id===it.id?{...p,qty:Math.max(0,p.qty-1)}:p).filter(p=>p.qty>0))}>−</button>
+                    <button className="px-2 py-1 border rounded-full" onClick={()=> setCart(prev=> prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p))}>+</button>
                   </div>
                 </div>
               ))}
               <div className="border-t pt-3 flex items-center justify-between font-semibold">
-                <span>Subtotal</span>
-                <span>{currency(subtotal)}</span>
+                <span>Subtotal</span><span>{currency(subtotal)}</span>
               </div>
-              <button className="w-full py-3 rounded-xl bg-black text-white font-semibold">
-                Finalizar pedido (simulado)
-              </button>
+              <button className="w-full py-3 rounded-xl bg-black text-white font-semibold">Finalizar pedido (simulado)</button>
             </div>
           )}
         </aside>
@@ -321,9 +177,9 @@ export default function App() {
   );
 }
 
-// =================== SUBCOMPONENTES ===================
-function SectionTitle({ id }) {
-  const cat = CATEGORIES.find((c) => c.id === id);
+// =================== Subcomponentes ===================
+function SectionTitle({ id, categories }){
+  const cat = categories.find(c=>c.id===id);
   return (
     <div className="mb-4">
       <h2 className="text-2xl font-bold">{cat?.label}</h2>
@@ -332,13 +188,11 @@ function SectionTitle({ id }) {
   );
 }
 
-function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }) {
-  const [editing, setEditing] = useState(false);
+function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }){
+  const [editing,setEditing]=useState(false);
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border flex flex-col">
-      <div className="h-36 w-full overflow-hidden">
-        <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
-      </div>
+      <div className="h-36 w-full overflow-hidden"><img src={item.img} alt={item.name} className="w-full h-full object-cover"/></div>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -347,277 +201,132 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }) {
           </div>
           <p className="text-sm text-neutral-600 mt-1 line-clamp-3">{item.desc}</p>
           {!item.available && (
-            <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-neutral-100">
-              Indisponível
-            </span>
+            <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-neutral-100">Indisponível</span>
           )}
         </div>
         <div className="mt-3 flex items-center gap-2">
-          <button
-            className="flex-1 py-2 rounded-xl border font-medium disabled:opacity-50"
-            disabled={!item.available}
-            onClick={() => onAdd(item)}
-          >
-            Adicionar
-          </button>
+          <button className="flex-1 py-2 rounded-xl border font-medium disabled:opacity-50" disabled={!item.available} onClick={()=>onAdd(item)}>Adicionar</button>
           {isAdmin && (
             <>
-              <button className="px-3 py-2 rounded-xl border" onClick={() => setEditing(true)}>
-                Editar
-              </button>
-              <button
-                className="px-3 py-2 rounded-xl border"
-                onClick={() => onDelete(item.id)}
-                title="Remover"
-              >
-                🗑️
-              </button>
+              <button className="px-3 py-2 rounded-xl border" onClick={()=>setEditing(true)}>Editar</button>
+              <button className="px-3 py-2 rounded-xl border" onClick={()=>onDelete(item.id)} title="Remover">🗑️</button>
             </>
           )}
         </div>
       </div>
-
       {editing && (
-        <EditModal
-          item={item}
-          onClose={() => setEditing(false)}
-          onSave={(data) => {
-            onEdit(data);
-            setEditing(false);
-          }}
-        />
+        <EditModal item={item} onClose={()=>setEditing(false)} onSave={(data)=>{onEdit(data); setEditing(false);}} categoriesRef/>
       )}
     </div>
   );
 }
 
-function EditModal({ item, onClose, onSave }) {
-  const [form, setForm] = useState(item);
+function EditModal({ item, onClose, onSave, categoriesRef }){
+  const [form,setForm]=useState(item);
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3">
         <h3 className="text-lg font-semibold">Editar item</h3>
         <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm">
-            <span className="text-neutral-500">Nome</span>
-            <input
-              className="w-full border rounded-xl px-3 py-2"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
+          <label className="text-sm"><span className="text-neutral-500">Nome</span>
+            <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
           </label>
-          <label className="text-sm">
-            <span className="text-neutral-500">Preço</span>
-            <input
-              type="number"
-              step="0.01"
-              className="w-full border rounded-xl px-3 py-2"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value || 0) })}
-            />
+          <label className="text-sm"><span className="text-neutral-500">Preço</span>
+            <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={e=>setForm({...form,price:parseFloat(e.target.value||0)})}/>
           </label>
-          <label className="text-sm col-span-2">
-            <span className="text-neutral-500">Descrição</span>
-            <textarea
-              className="w-full border rounded-xl px-3 py-2"
-              value={form.desc}
-              onChange={(e) => setForm({ ...form, desc: e.target.value })}
-            />
+          <label className="text-sm col-span-2"><span className="text-neutral-500">Descrição</span>
+            <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})}/>
           </label>
-          <label className="text-sm col-span-2">
-            <span className="text-neutral-500">URL da imagem</span>
-            <input
-              className="w-full border rounded-xl px-3 py-2"
-              value={form.img}
-              onChange={(e) => setForm({ ...form, img: e.target.value })}
-            />
+          <label className="text-sm col-span-2"><span className="text-neutral-500">URL da imagem</span>
+            <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={e=>setForm({...form,img:e.target.value})}/>
           </label>
-          <label className="text-sm">
-            <span className="text-neutral-500">Categoria</span>
-            <select
-              className="w-full border rounded-xl px-3 py-2"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+          <label className="text-sm"><span className="text-neutral-500">Categoria</span>
+            {/* Para edição, manter o valor como está. Se quiser listar, passe as categories via props. */}
+            <input className="w-full border rounded-xl px-3 py-2" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}/>
           </label>
           <label className="text-sm flex items-end gap-2">
-            <input
-              type="checkbox"
-              checked={form.available}
-              onChange={(e) => setForm({ ...form, available: e.target.checked })}
-            />
+            <input type="checkbox" checked={form.available} onChange={e=>setForm({...form,available:e.target.checked})}/>
             Disponível
           </label>
         </div>
         <div className="pt-2 flex items-center justify-end gap-2">
-          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>
-            Cancelar
-          </button>
-          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={() => onSave(form)}>
-            Salvar
-          </button>
+          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
+          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>onSave(form)}>Salvar</button>
         </div>
       </div>
     </div>
   );
 }
 
-function AdminActions({ menu, setMenu }) {
-  const [open, setOpen] = useState(false);
-  const empty = {
-    id: `id_${Math.random().toString(36).slice(2, 8)}`,
-    category: CATEGORIES[0].id,
-    name: "",
-    desc: "",
-    price: 0,
-    img: "",
-    available: true,
-  };
-  const [form, setForm] = useState(empty);
+function AdminActions({ menu, setMenu, categories, setCategories }){
+  const [open,setOpen]=useState(false);
+  const empty = { id:`id_${Math.random().toString(36).slice(2,8)}`, category: (categories[0]?.id||"marmitas"), name:"", desc:"", price:0, img:"", available:true };
+  const [form,setForm]=useState(empty);
 
   return (
     <div className="relative">
-      <button className="px-4 py-2 rounded-full border" onClick={() => setOpen((v) => !v)}>
-        Painel do administrador
-      </button>
-
+      <button className="px-4 py-2 rounded-full border" onClick={()=>setOpen(v=>!v)}>Painel do administrador</button>
       {open && (
         <div className="absolute right-0 mt-2 w-[32rem] bg-white border rounded-2xl shadow-xl p-4 z-40">
-          <h4 className="font-semibold mb-2">Novo item / Combos</h4>
+          <h4 className="font-semibold mb-2">Gerenciamento</h4>
+          <div className="mb-4 p-3 border rounded-2xl">
+            <h5 className="font-medium mb-2">Criar nova sessão (categoria)</h5>
+            <NewCategory categories={categories} setCategories={setCategories} />
+          </div>
+
+          <h4 className="font-semibold mb-2">Novo item</h4>
           <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
-              <span className="text-neutral-500">Nome</span>
-              <input
-                className="w-full border rounded-xl px-3 py-2"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+            <label className="text-sm"><span className="text-neutral-500">Nome</span>
+              <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
             </label>
-            <label className="text-sm">
-              <span className="text-neutral-500">Preço</span>
-              <input
-                type="number"
-                step="0.01"
-                className="w-full border rounded-xl px-3 py-2"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value || 0) })}
-              />
+            <label className="text-sm"><span className="text-neutral-500">Preço</span>
+              <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={e=>setForm({...form,price:parseFloat(e.target.value||0)})}/>
             </label>
-            <label className="text-sm col-span-2">
-              <span className="text-neutral-500">Descrição</span>
-              <textarea
-                className="w-full border rounded-xl px-3 py-2"
-                value={form.desc}
-                onChange={(e) => setForm({ ...form, desc: e.target.value })}
-              />
+            <label className="text-sm col-span-2"><span className="text-neutral-500">Descrição</span>
+              <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})}/>
             </label>
-            <label className="text-sm col-span-2">
-              <span className="text-neutral-500">URL da imagem</span>
-              <input
-                className="w-full border rounded-xl px-3 py-2"
-                value={form.img}
-                onChange={(e) => setForm({ ...form, img: e.target.value })}
-              />
+            <label className="text-sm col-span-2"><span className="text-neutral-500">URL da imagem</span>
+              <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={e=>setForm({...form,img:e.target.value})}/>
             </label>
-            <label className="text-sm">
-              <span className="text-neutral-500">Categoria</span>
-              <select
-                className="w-full border rounded-xl px-3 py-2"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
+            <label className="text-sm"><span className="text-neutral-500">Categoria</span>
+              <select className="w-full border rounded-xl px-3 py-2" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>
+                {categories.map(c=> <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </label>
             <label className="text-sm flex items-end gap-2">
-              <input
-                type="checkbox"
-                checked={form.available}
-                onChange={(e) => setForm({ ...form, available: e.target.checked })}
-              />
+              <input type="checkbox" checked={form.available} onChange={e=>setForm({...form,available:e.target.checked})}/>
               Disponível
             </label>
           </div>
+
           <div className="pt-2 flex items-center justify-between">
-            <button
-              className="px-4 py-2 rounded-xl border"
-              onClick={() => setForm(empty)}
-              title="Limpar"
-            >
-              Limpar
-            </button>
-            <button
-              className="px-4 py-2 rounded-xl bg-black text-white"
-              onClick={() => {
-                setMenu((prev) => [...prev, form]);
-                setForm({ ...empty, id: `id_${Math.random().toString(36).slice(2, 8)}` });
-              }}
-            >
-              Adicionar ao cardápio
-            </button>
+            <button className="px-4 py-2 rounded-xl border" onClick={()=>setForm(empty)} title="Limpar">Limpar</button>
+            <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>{ setMenu(prev=>[...prev,form]); setForm({...empty, id:`id_${Math.random().toString(36).slice(2,8)}`}); }}>Adicionar ao cardápio</button>
           </div>
 
           <div className="mt-4">
-            <h5 className="font-semibold mb-2">Exportar / Importar</h5>
-            <p className="text-xs text-neutral-500 mb-2">
-              Use para fazer backup do cardápio (JSON). As alterações ficam salvas no navegador
-              via <b>localStorage</b>.
-            </p>
+            <h5 className="font-semibold mb-2">Links</h5>
+            <div className="flex gap-2 mb-4">
+              {(() => {
+                const base = `${window.location.origin}${window.location.pathname}`;
+                const publicUrl = `${base}?access=${ACCESS_KEY}`;
+                const adminUrl  = `${base}?access=${ACCESS_KEY}&admin=${ADMIN_KEY}`;
+                return (
+                  <>
+                    <CopyButton label="Copiar link público" text={publicUrl}/>
+                    <CopyButton label="Copiar link de admin" text={adminUrl}/>
+                  </>
+                );
+              })()}
+            </div>
+
+            <h5 className="font-semibold mb-2">Backup (JSON)</h5>
             <div className="flex gap-2">
-              <button
-                className="px-4 py-2 rounded-xl border"
-                onClick={() => {
-                  const data = JSON.stringify(menu, null, 2);
-                  const blob = new Blob([data], { type: "application/json" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "cardapio.json";
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                Baixar JSON
-              </button>
-              <label className="px-4 py-2 rounded-xl border cursor-pointer">
-                Importar JSON
-                <input
-                  type="file"
-                  accept="application/json"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const text = await file.text();
-                    try {
-                      const data = JSON.parse(text);
-                      if (Array.isArray(data)) setMenu(data);
-                    } catch (err) {
-                      alert("Arquivo inválido");
-                    }
-                  }}
-                />
+              <button className="px-4 py-2 rounded-xl border" onClick={()=>{ const data=JSON.stringify(menu,null,2); const blob=new Blob([data],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="cardapio.json"; a.click(); URL.revokeObjectURL(url); }}>Baixar JSON</button>
+              <label className="px-4 py-2 rounded-xl border cursor-pointer">Importar JSON
+                <input type="file" accept="application/json" className="hidden" onChange={async e=>{ const f=e.target.files?.[0]; if(!f) return; try{ const text=await f.text(); const data=JSON.parse(text); if(Array.isArray(data)) setMenu(data); }catch{ alert("Arquivo inválido"); } }}/>
               </label>
-              <button
-                className="px-4 py-2 rounded-xl border"
-                onClick={() => {
-                  if (confirm("Tem certeza que deseja resetar para o menu padrão?")) {
-                    setMenu(DEFAULT_MENU);
-                  }
-                }}
-              >
-                Resetar menu
-              </button>
+              <button className="px-4 py-2 rounded-xl border" onClick={()=>{ if(confirm("Resetar para menu padrão?")) setMenu(DEFAULT_MENU); }}>Resetar</button>
             </div>
           </div>
         </div>
@@ -626,25 +335,36 @@ function AdminActions({ menu, setMenu }) {
   );
 }
 
-function ShareLinks() {
-  const base = `${window.location.origin}${window.location.pathname}`;
-  const publicUrl = `${base}?access=${ACCESS_KEY}`;
+function NewCategory({ categories, setCategories }){
+  const [label,setLabel]=useState("");
+  const [id,setId]=useState("");
+  useEffect(()=> setId(slugify(label)),[label]);
   return (
-    <div className="mt-3 flex items-center gap-3 justify-center">
-      <CopyButton label="Copiar link público" text={publicUrl} />
+    <div className="grid grid-cols-3 gap-3 items-end">
+      <label className="col-span-2 text-sm"><span className="text-neutral-500">Nome da sessão (ex.: “Sobremesas”)</span>
+        <input className="w-full border rounded-xl px-3 py-2" value={label} onChange={e=>setLabel(e.target.value)} placeholder="Nome visível ao cliente"/>
+      </label>
+      <label className="text-sm"><span className="text-neutral-500">ID (slug)</span>
+        <input className="w-full border rounded-xl px-3 py-2" value={id} onChange={e=>setId(slugify(e.target.value))} placeholder="ex.: sobremesas"/>
+      </label>
+      <button className="col-span-3 mt-2 px-4 py-2 rounded-xl bg-black text-white" onClick={()=>{ if(!label||!id) return alert("Preencha nome e id."); if(categories.some(c=>c.id===id)) return alert("Já existe uma sessão com esse ID."); setCategories([...categories,{id,label}]); setLabel(""); setId(""); }}>Criar sessão</button>
     </div>
   );
 }
 
-function CopyButton({ label, text }) {
+function ShareLinks(){
+  const base = `${window.location.origin}${window.location.pathname}`;
+  const publicUrl = `${base}?access=${ACCESS_KEY}`;
   return (
-    <button
-      className="px-3 py-2 rounded-xl border text-xs"
-      onClick={async () => {
-        await navigator.clipboard.writeText(text);
-        alert("Link copiado!\n" + text);
-      }}
-    >
+    <div className="mt-3 flex items-center gap-3 justify-center">
+      <CopyButton label="Copiar link público" text={publicUrl}/>
+    </div>
+  );
+}
+
+function CopyButton({ label, text }){
+  return (
+    <button className="px-3 py-2 rounded-xl border text-xs" onClick={async()=>{ await navigator.clipboard.writeText(text); alert("Link copiado!\n"+text); }}>
       {label}
     </button>
   );
