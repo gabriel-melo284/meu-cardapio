@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 
 /** =================== CONFIG =================== **/
 // Troque as chaves antes de publicar (elas NÃO são segredo real no front-end)
-const ACCESS_KEY = "meu-link-secreto";      // público: ?access=...
-const ADMIN_KEY  = "admin-123";             // admin:  ?access=...&admin=...
+const ACCESS_KEY = "umami";      // público: ?access=...
+const ADMIN_KEY  = "admin";             // admin:  ?access=...&admin=...
 
 // chaves do localStorage ISOLADAS por ACCESS_KEY (evita conflito ao trocar a chave)
 const LS = {
@@ -12,11 +12,11 @@ const LS = {
 };
 
 const STORE = {
-  name: "SABOR & CIA",
-  address: "Av. Exemplo, 1234",
-  city: "Sua Cidade",
-  opensAt: "10:00",
-  closesAt: "22:00",
+  name: "UMAMI - FIT E GOURMET",
+  address: "Santa Mônica",
+  city: "Uberlândia",
+  opensAt: "08:00",
+  closesAt: "18:00",
   banner:
     "https://images.unsplash.com/photo-1604908554007-43f5b2f318a6?q=80&w=2070&auto=format&fit=crop",
   logo:
