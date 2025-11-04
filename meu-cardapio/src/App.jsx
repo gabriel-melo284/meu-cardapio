@@ -6,16 +6,16 @@ const ADMIN_KEY  = "admin";   // admin:   ?access=umami&admin=admin
 
 // localStorage isolado por chave
 const LS = {
-  cats: (ak) => `cats_v3_${ak}`,
-  menu: (ak) => `menu_v3_${ak}`,
+  cats: (ak) => `cats_v4_${ak}`,
+  menu: (ak) => `menu_v4_${ak}`,
 };
 
 const STORE = {
   name: "Umami Fit • Gourmet",
   address: "Av. Exemplo, 1234",
   city: "Sua Cidade",
-  opensAt: "10:00",
-  closesAt: "22:00",
+  opensAt: "08:00",              // ajuste se quiser (formato HH:MM 24h)
+  closesAt: "18:00",
   banner: "/banner.jpg",         // /public/banner.jpg
   logo: "/umami-logo.png",       // /public/umami-logo.png
 };
@@ -58,6 +58,21 @@ function safeSave(key, value){
   try{ localStorage.setItem(key, JSON.stringify(value)); }catch{}
 }
 
+function parseHM(hm){
+  const [h,m] = hm.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+function businessStatus(opensAt, closesAt){
+  const now = new Date();
+  const open = parseHM(opensAt);
+  const close = parseHM(closesAt);
+  if (now < open) return `abre às ${opensAt}`;
+  if (now >= open && now <= close) return `fecha às ${closesAt}`;
+  return `abre amanhã às ${opensAt}`;
+}
+
 /** =================== APP =================== **/
 export default function App(){
   const hasAccess = getParam("access") === ACCESS_KEY;
@@ -73,6 +88,9 @@ export default function App(){
   const [showNewCat,  setShowNewCat]  = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemCat,  setNewItemCat]  = useState(""); // para criar item a partir da Principal
+
+  // modal de visualização do item
+  const [viewItem, setViewItem] = useState(null);
 
   // prioridade quando o usuário clica manualmente
   const [manualTabPriority, setManualTabPriority] = useState(false);
@@ -118,14 +136,12 @@ export default function App(){
   const filtered = useMemo(()=>{
     const avail = menu.filter(i=>i.available);
     const q = query.trim().toLowerCase();
-
     if(q){
       return avail.filter(i=>{
         const catLabel = categories.find(c=>c.id===i.category)?.label?.toLowerCase() || "";
         return (i.name||"").toLowerCase().includes(q) || (i.desc||"").toLowerCase().includes(q) || catLabel.includes(q);
       });
     }
-
     if(tab === "principal") return avail;
     return avail.filter(i=>i.category===tab);
   },[menu, categories, tab, query]);
@@ -134,10 +150,12 @@ export default function App(){
   const upsertItem= (item)=> setMenu(prev=> prev.some(p=>p.id===item.id)? prev.map(p=>p.id===item.id?item:p) : [...prev, item]);
   const removeItem= (id)=> setMenu(prev=> prev.filter(p=>p.id!==id));
 
+  const statusText = businessStatus(STORE.opensAt, STORE.closesAt);
+
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Banner estático com fallback */}
-      <div className="relative h-72 overflow-hidden">
+      <div className="relative h-72 sm:h-80 md:h-96 overflow-hidden">
         <img
           src={STORE.banner}
           alt="banner"
@@ -149,16 +167,20 @@ export default function App(){
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl mx-auto w-full px-4 pb-6">
             <div className="flex items-center gap-4">
-              {/* LOGO MAIOR E NÍTIDA */}
+              {/* LOGO BEM MAIOR */}
               <img
                 src={STORE.logo}
                 alt="logo"
-                className="w-32 h-32 rounded-full ring-8 ring-white object-cover bg-white shadow-md"
+                className="w-40 h-40 rounded-full ring-8 ring-white object-cover bg-white shadow-md"
               />
-              <div>
-                <h1 className="text-white text-3xl font-bold">{STORE.name}</h1>
-                <p className="text-white/90 text-sm">{STORE.address} • {STORE.city}</p>
-                <p className="text-white/80 text-xs">Hoje: {STORE.opensAt} – {STORE.closesAt}</p>
+              <div className="space-y-1">
+                <h1 className="text-white text-3xl sm:text-4xl md:text-5xl font-extrabold">{STORE.name}</h1>
+                <p className="text-white/95 text-base sm:text-lg md:text-xl font-medium">
+                  {STORE.address} • {STORE.city}
+                </p>
+                <p className="text-white/90 text-sm sm:text-base md:text-lg font-semibold">
+                  {statusText}
+                </p>
               </div>
             </div>
           </div>
@@ -170,29 +192,29 @@ export default function App(){
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <input
             placeholder="Buscar no cardápio"
-            className="flex-1 rounded-full border px-4 py-2 focus:outline-none"
+            className="flex-1 rounded-full border px-4 py-3 text-base focus:outline-none"
             value={query}
             onChange={(e)=> setQuery(e.target.value)}
           />
         </div>
         <div className="max-w-7xl mx-auto px-4 pb-3 overflow-x-auto">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {tabs.map(c=>(
               <button
                 key={c.id}
                 onClick={()=>{
-                  if(query.trim()) setQuery("");           // limpar busca ao selecionar manualmente
-                  setManualTabPriority(true);              // dar prioridade à seleção manual
+                  if(query.trim()) setQuery("");
+                  setManualTabPriority(true);
                   setTab(c.id);
                 }}
-                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap border ${tab===c.id ? "bg-black text-white" : "bg-white"}`}
+                className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap border ${tab===c.id ? "bg-black text-white" : "bg-white"}`}
               >
                 {c.label}
               </button>
             ))}
             {isAdmin && (
               <button
-                className="ml-auto w-10 h-10 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
+                className="ml-auto w-11 h-11 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
                 title="Criar nova sessão"
                 onClick={()=> setShowNewCat(true)}
               >+</button>
@@ -202,41 +224,39 @@ export default function App(){
       </div>
 
       {/* Conteúdo */}
-      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          {query.trim()
-            ? <SearchTitle query={query} count={filtered.length}/>
-            : <SectionTitle id={tab} categories={tabs}/>
-          }
+          <SectionTitle id={tab} categories={tabs} />
 
           {/* Botão + para criar item (não aparece na Principal) */}
           {!query.trim() && isAdmin && tab!=="principal" && (
             <button
-              className="mb-4 w-10 h-10 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
+              className="mb-4 w-11 h-11 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
               title="Adicionar item nesta sessão"
               onClick={()=> { setNewItemCat(tab); setShowNewItem(true); }}
             >+</button>
           )}
 
-          {/* Render principal como subseções */}
+          {/* Principal como subseções (modo admin: mostra todas, mesmo vazias) */}
           {tab === "principal" && !query.trim() ? (
             <div className="space-y-8">
               {categories.map(cat=>{
                 const items = menu.filter(i=>i.available && i.category===cat.id);
-                if(items.length===0) return null;
+                const showSection = isAdmin ? true : items.length>0;
+                if(!showSection) return null;
                 return (
                   <div key={cat.id}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xl font-bold">{cat.label}</h3>
+                      <h3 className="text-xl sm:text-2xl font-extrabold">{cat.label}</h3>
                       {isAdmin && (
                         <button
-                          className="w-9 h-9 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
+                          className="w-10 h-10 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
                           title={`Adicionar item em ${cat.label}`}
                           onClick={()=>{ setNewItemCat(cat.id); setShowNewItem(true); }}
                         >+</button>
                       )}
                     </div>
-                    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                       {items.map(item=>(
                         <CardItem
                           key={item.id}
@@ -248,15 +268,22 @@ export default function App(){
                           isAdmin={isAdmin}
                           onEdit={upsertItem}
                           onDelete={removeItem}
+                          onView={setViewItem}
                         />
                       ))}
+                      {/* modo admin: seção vazia mostra apenas texto leve */}
+                      {isAdmin && items.length===0 && (
+                        <div className="text-sm text-neutral-400 italic">
+                          Nenhum item nesta sessão.
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map(item=>(
                 <CardItem
                   key={item.id}
@@ -268,15 +295,16 @@ export default function App(){
                   isAdmin={isAdmin}
                   onEdit={upsertItem}
                   onDelete={removeItem}
+                  onView={setViewItem}
                 />
               ))}
             </div>
           )}
         </div>
 
-        {/* Sacola + Modais */}
+        {/* Carrinho + Modais */}
         <aside className="bg-white rounded-2xl shadow-sm p-4 h-max sticky top-28">
-          <h3 className="font-semibold text-lg mb-3">Sua sacola</h3>
+          <h3 className="font-semibold text-lg mb-3">Seu carrinho</h3>
 
           {showNewCat && (
             <NewCategoryModal
@@ -294,9 +322,24 @@ export default function App(){
               onSave={(data)=>{ upsertItem(data); setShowNewItem(false); }}
             />
           )}
+          {viewItem && (
+            <ViewItemModal
+              item={viewItem}
+              onClose={()=>setViewItem(null)}
+              onAdd={(it)=> {
+                setCart(prev=>{
+                  const f = prev.find(p=>p.id===it.id);
+                  return f ? prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p) : [...prev, {...it, qty:1}];
+                });
+                setViewItem(null);
+              }}
+              isAdmin={isAdmin}
+              onEdit={(upd)=>{ upsertItem(upd); setViewItem(upd); }}
+            />
+          )}
 
           {cart.length===0 ? (
-            <div className="text-center text-neutral-500 py-10">Sacola vazia</div>
+            <div className="text-center text-neutral-500 py-10">Carrinho vazio</div>
           ) : (
             <div className="space-y-3">
               {cart.map(it=>(
@@ -333,30 +376,27 @@ export default function App(){
 function SectionTitle({ id, categories }){
   const cat = categories.find(c=>c.id===id);
   return (
-    <div className="mb-2">
-      <h2 className="text-2xl font-bold">{cat?.label}</h2>
-      <p className="text-sm text-neutral-500">
-        {id==="principal" ? "Itens organizados por sessão" : "Escolha suas opções favoritas"}
-      </p>
+    <div className="mb-3">
+      <h2 className="text-2xl sm:text-3xl font-extrabold">{cat?.label}</h2>
     </div>
   );
 }
 function SearchTitle({ query, count }){
   return (
-    <div className="mb-2">
-      <h2 className="text-2xl font-bold">Resultados para “{query}”</h2>
+    <div className="mb-3">
+      <h2 className="text-2xl sm:text-3xl font-extrabold">Resultados para “{query}”</h2>
       <p className="text-sm text-neutral-500">{count} item(ns) encontrados</p>
     </div>
   );
 }
 
-function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }){
+function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   const [editing, setEditing] = useState(false);
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border flex flex-col">
-      <div className="h-36 w-full overflow-hidden">
+      <button className="h-40 w-full overflow-hidden" onClick={()=>onView(item)}>
         <img src={item.img} alt={item.name} className="w-full h-full object-cover"/>
-      </div>
+      </button>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -387,10 +427,48 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }){
   );
 }
 
+/** ===== Modal de visualização (detalhes do item) ===== **/
+function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
+  const [edit, setEdit] = useState(false);
+  if(!item) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3 sm:p-6">
+      <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden">
+        <div className="relative">
+          <img src={item.img} alt={item.name} className="w-full h-64 sm:h-80 md:h-96 object-cover"/>
+          <button className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border" onClick={onClose}>Fechar</button>
+        </div>
+        <div className="p-4 sm:p-6 space-y-2">
+          <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
+          <div className="text-neutral-600">{item.desc}</div>
+          <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
+          <div className="flex items-center gap-2 pt-2">
+            <button className="px-4 py-2 rounded-xl bg-black text-white font-semibold" onClick={()=>onAdd(item)} disabled={!item.available}>
+              {item.available ? "Adicionar ao carrinho" : "Indisponível"}
+            </button>
+            {isAdmin && (
+              <button className="px-4 py-2 rounded-xl border" onClick={()=>setEdit(true)}>Editar</button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {edit && (
+        <EditModal
+          item={item}
+          onClose={()=>setEdit(false)}
+          onSave={(d)=>{ onEdit(d); setEdit(false); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** ===== Modal de edição ===== **/
 function EditModal({ item, onClose, onSave }){
   const [form,setForm] = useState(item);
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3">
         <h3 className="text-lg font-semibold">Editar item</h3>
         <div className="grid grid-cols-2 gap-3">
@@ -423,7 +501,7 @@ function EditModal({ item, onClose, onSave }){
   );
 }
 
-/** =================== Modais de criação =================== **/
+/** ===== Modais de criação ===== **/
 function NewCategoryModal({ categories, setCategories, onClose, setTab }){
   const [label, setLabel] = useState("");
   const [id, setId] = useState("");
