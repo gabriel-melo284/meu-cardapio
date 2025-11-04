@@ -165,8 +165,7 @@ export default function App() {
             Este cardápio é privado. Solicite o <b>link de acesso</b> ao estabelecimento.
           </p>
           <p className="text-sm text-neutral-500">
-            Dica (dev): use <code>?access={ACCESS_KEY}</code> no URL. Para administrador, acrescente
-            <code> &admin={ADMIN_KEY}</code>.
+            Dica (dev): use <code>?access={ACCESS_KEY}</code> no URL. O acesso de administrador agora é feito via senha no próprio site.
           </p>
         </div>
       </div>
@@ -208,7 +207,19 @@ export default function App() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          {isAdmin && <AdminActions menu={menu} setMenu={setMenu} />}
+          {isAdmin ? (
+            <AdminActions menu={menu} setMenu={setMenu} />
+          ) : (
+            <button
+              className="px-4 py-2 rounded-full border"
+              onClick={() => {
+                const pass = prompt("Senha do administrador:");
+                if (!pass || !tryAdminLogin(pass)) alert("Senha incorreta");
+              }}
+            >
+              Entrar como admin
+            </button>
+          )}
         </div>
         {/* Abas de categorias */}
         <div className="max-w-7xl mx-auto px-4 pb-3 overflow-x-auto">
@@ -618,11 +629,9 @@ function AdminActions({ menu, setMenu }) {
 function ShareLinks() {
   const base = `${window.location.origin}${window.location.pathname}`;
   const publicUrl = `${base}?access=${ACCESS_KEY}`;
-  const adminUrl = `${base}?access=${ACCESS_KEY}&admin=${ADMIN_KEY}`;
   return (
     <div className="mt-3 flex items-center gap-3 justify-center">
       <CopyButton label="Copiar link público" text={publicUrl} />
-      <CopyButton label="Copiar link de admin" text={adminUrl} />
     </div>
   );
 }
