@@ -80,6 +80,9 @@ export default function App() {
   const [tab, setTab]               = useState(() => (categories[0]?.id || "marmitas"));
   const [query, setQuery]           = useState("");
   const [cart, setCart]             = useState([]);
+  // Popups de criação
+  const [showNewCat,  setShowNewCat]  = useState(false);
+  const [showNewItem, setShowNewItem] = useState(false);
 
   // Se categorias carregadas estiverem vazias/invalidas, restaura padrão
   useEffect(() => {
