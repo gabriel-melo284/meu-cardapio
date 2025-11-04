@@ -1,8 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 /** =================== CONFIG =================== **/
-const ACCESS_KEY = "meu-link-secreto";     // público: ?access=...
-const ADMIN_KEY  = "admin-123";            // admin:  ?access=...&admin=...
+// Troque as chaves antes de publicar (elas NÃO são segredo real no front-end)
+const ACCESS_KEY = "meu-link-secreto";      // público: ?access=...
+const ADMIN_KEY  = "admin-123";             // admin:  ?access=...&admin=...
+
+// chaves do localStorage ISOLADAS por ACCESS_KEY (evita conflito ao trocar a chave)
+const LS = {
+  cats: (ak) => `cats_v2_${ak}`,
+  menu: (ak) => `menu_v2_${ak}`,
+};
 
 const STORE = {
   name: "SABOR & CIA",
@@ -37,35 +44,63 @@ const DEFAULT_MENU = [
 ];
 
 /** =================== HELPERS =================== **/
-const currency = (n) => n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-const getParam = (k) => { try { return new URL(window.location.href).searchParams.get(k);} catch { return null; } };
-const slugify = (t) =>
-  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-   .replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+const currency = (n) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const getParam = (k) => { try { return new URL(window.location.href).searchParams.get(k); } catch { return null; } };
+const slugify = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+function safeLoad(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const val = JSON.parse(raw);
+    // validações mínimas
+    if (Array.isArray(fallback) && !Array.isArray(val)) return fallback;
+    return val ?? fallback;
+  } catch {
+    return fallback; // se der erro no JSON, usa fallback
+  }
+}
+
+function safeSave(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // storage cheio ou bloqueado — silenciosamente ignora
+  }
+}
 
 /** =================== APP =================== **/
-export default function App(){
+export default function App() {
   const hasAccess = getParam("access") === ACCESS_KEY;
   const isAdmin   = hasAccess && getParam("admin") === ADMIN_KEY;
 
-  const [categories, setCategories] = useState(() =>
-    JSON.parse(localStorage.getItem("categories-data")||"null") || DEFAULT_CATEGORIES
-  );
-  const [menu, setMenu] = useState(() =>
-    JSON.parse(localStorage.getItem("menu-data")||"null") || DEFAULT_MENU
-  );
-  const [tab, setTab] = useState(() => (categories[0]?.id || "marmitas"));
-  const [query, setQuery] = useState("");
-  const [cart, setCart]   = useState([]);
+  // Carrega estado com proteção e isolamento por ACCESS_KEY
+  const [categories, setCategories] = useState(() => safeLoad(LS.cats(ACCESS_KEY), DEFAULT_CATEGORIES));
+  const [menu, setMenu]             = useState(() => safeLoad(LS.menu(ACCESS_KEY), DEFAULT_MENU));
+  const [tab, setTab]               = useState(() => (categories[0]?.id || "marmitas"));
+  const [query, setQuery]           = useState("");
+  const [cart, setCart]             = useState([]);
 
-  // popups
-  const [showNewCat,  setShowNewCat]  = useState(false);
-  const [showNewItem, setShowNewItem] = useState(false);
+  // Se categorias carregadas estiverem vazias/invalidas, restaura padrão
+  useEffect(() => {
+    if (!Array.isArray(categories) || categories.length === 0) {
+      setCategories(DEFAULT_CATEGORIES);
+    }
+  }, [categories]);
 
-  useEffect(()=>localStorage.setItem("categories-data", JSON.stringify(categories)),[categories]);
-  useEffect(()=>localStorage.setItem("menu-data", JSON.stringify(menu)),[menu]);
+  // Se tab não existir mais, selecione a primeira
+  useEffect(() => {
+    if (!categories.find((c) => c.id === tab)) {
+      const first = categories[0]?.id || "marmitas";
+      if (first !== tab) setTab(first);
+    }
+  }, [categories, tab]);
 
-  if(!hasAccess){
+  // Persistência segura
+  useEffect(() => { safeSave(LS.cats(ACCESS_KEY), categories); }, [categories]);
+  useEffect(() => { safeSave(LS.menu(ACCESS_KEY), menu); }, [menu]);
+
+  if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-100">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
@@ -78,28 +113,30 @@ export default function App(){
   }
 
   const filtered = useMemo(() =>
-    menu.filter(i =>
-      i.category===tab && i.available &&
-      (i.name.toLowerCase().includes(query.toLowerCase()) ||
-       i.desc.toLowerCase().includes(query.toLowerCase()))
-    ), [menu, tab, query]
-  );
+    menu.filter((i) =>
+      i.category === tab && i.available && (
+        (i.name || "").toLowerCase().includes(query.toLowerCase()) ||
+        (i.desc || "").toLowerCase().includes(query.toLowerCase())
+      )
+    )
+  , [menu, tab, query]);
 
-  const subtotal = cart.reduce((s, it)=> s + it.price*it.qty, 0);
+  const subtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
 
-  const upsertItem  = (item)=> setMenu(prev => prev.some(p=>p.id===item.id) ? prev.map(p=>p.id===item.id?item:p) : [...prev, item]);
-  const removeItem  = (id)=> setMenu(prev => prev.filter(p=>p.id!==id));
+  const upsertItem = (item) =>
+    setMenu((prev) => (prev.some((p) => p.id === item.id) ? prev.map((p) => (p.id === item.id ? item : p)) : [...prev, item]));
+  const removeItem = (id) => setMenu((prev) => prev.filter((p) => p.id !== id));
 
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Banner */}
       <div className="relative h-72 overflow-hidden">
-        <img src={STORE.banner} alt="banner" className="w-full h-full object-cover"/>
-        <div className="absolute inset-0 bg-black/40"/>
+        <img src={STORE.banner} alt="banner" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-black/40" />
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl mx-auto w-full px-4 pb-6">
             <div className="flex items-center gap-4">
-              <img src={STORE.logo} alt="logo" className="w-20 h-20 rounded-full ring-4 ring-white object-cover"/>
+              <img src={STORE.logo} alt="logo" className="w-20 h-20 rounded-full ring-4 ring-white object-cover" />
               <div>
                 <h1 className="text-white text-2xl font-bold">{STORE.name}</h1>
                 <p className="text-white/90 text-sm">{STORE.address} • {STORE.city}</p>
@@ -117,16 +154,18 @@ export default function App(){
             placeholder="Buscar no cardápio"
             className="flex-1 rounded-full border px-4 py-2 focus:outline-none"
             value={query}
-            onChange={(e)=>setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <div className="max-w-7xl mx-auto px-4 pb-3 overflow-x-auto">
           <div className="flex items-center gap-4">
-            {categories.map(c => (
+            {categories.map((c) => (
               <button
                 key={c.id}
-                onClick={()=>setTab(c.id)}
-                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap border ${tab===c.id ? "bg-black text-white" : "bg-white"}`}
+                onClick={() => setTab(c.id)}
+                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap border ${
+                  tab === c.id ? "bg-black text-white" : "bg-white"
+                }`}
               >
                 {c.label}
               </button>
@@ -135,8 +174,10 @@ export default function App(){
               <button
                 className="ml-auto px-3 py-2 rounded-full border"
                 title="Criar nova sessão"
-                onClick={()=>setShowNewCat(true)}
-              >+</button>
+                onClick={() => setShowNewCat(true)}
+              >
+                +
+              </button>
             )}
           </div>
         </div>
@@ -145,23 +186,29 @@ export default function App(){
       {/* Conteúdo */}
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <SectionTitle id={tab} categories={categories}/>
+          <SectionTitle id={tab} categories={categories} />
           {isAdmin && (
             <button
               className="mb-4 px-3 py-2 rounded-full border"
               title="Adicionar item nesta sessão"
-              onClick={()=>setShowNewItem(true)}
-            >+</button>
+              onClick={() => setShowNewItem(true)}
+            >
+              +
+            </button>
           )}
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map(item => (
+            {filtered.map((item) => (
               <CardItem
                 key={item.id}
                 item={item}
-                onAdd={(it)=> setCart(prev=>{
-                  const f=prev.find(p=>p.id===it.id);
-                  return f ? prev.map(p=>p.id===it.id?{...p, qty:p.qty+1}:p) : [...prev, {...it, qty:1}];
-                })}
+                onAdd={(it) =>
+                  setCart((prev) => {
+                    const f = prev.find((p) => p.id === it.id);
+                    return f
+                      ? prev.map((p) => (p.id === it.id ? { ...p, qty: p.qty + 1 } : p))
+                      : [...prev, { ...it, qty: 1 }];
+                  })
+                }
                 isAdmin={isAdmin}
                 onEdit={upsertItem}
                 onDelete={removeItem}
@@ -170,14 +217,15 @@ export default function App(){
           </div>
         </div>
 
-        {/* Sacola */}
+        {/* Sacola + Modais */}
         <aside className="bg-white rounded-2xl shadow-sm p-4 h-max sticky top-28">
           <h3 className="font-semibold text-lg mb-3">Sua sacola</h3>
+
           {showNewCat && (
             <NewCategoryModal
               categories={categories}
               setCategories={setCategories}
-              onClose={()=>setShowNewCat(false)}
+              onClose={() => setShowNewCat(false)}
               setTab={setTab}
             />
           )}
@@ -185,32 +233,55 @@ export default function App(){
             <NewItemModal
               currentCategory={tab}
               categories={categories}
-              onClose={()=>setShowNewItem(false)}
-              onSave={(data)=>{ upsertItem(data); setShowNewItem(false); }}
+              onClose={() => setShowNewItem(false)}
+              onSave={(data) => {
+                upsertItem(data);
+                setShowNewItem(false);
+              }}
             />
           )}
-          {cart.length===0 ? (
+
+          {cart.length === 0 ? (
             <div className="text-center text-neutral-500 py-10">Sacola vazia</div>
           ) : (
             <div className="space-y-3">
-              {cart.map(it=>(
+              {cart.map((it) => (
                 <div key={it.id} className="flex items-center justify-between gap-3">
                   <div>
                     <div className="font-medium text-sm">{it.name}</div>
                     <div className="text-xs text-neutral-500">{currency(it.price)} x {it.qty}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="px-2 py-1 border rounded-full"
-                      onClick={()=> setCart(prev=> prev.map(p=>p.id===it.id?{...p,qty:Math.max(0,p.qty-1)}:p).filter(p=>p.qty>0))}>−</button>
-                    <button className="px-2 py-1 border rounded-full"
-                      onClick={()=> setCart(prev=> prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p))}>+</button>
+                    <button
+                      className="px-2 py-1 border rounded-full"
+                      onClick={() =>
+                        setCart((prev) =>
+                          prev
+                            .map((p) => (p.id === it.id ? { ...p, qty: Math.max(0, p.qty - 1) } : p))
+                            .filter((p) => p.qty > 0)
+                        )
+                      }
+                    >
+                      −
+                    </button>
+                    <button
+                      className="px-2 py-1 border rounded-full"
+                      onClick={() =>
+                        setCart((prev) => prev.map((p) => (p.id === it.id ? { ...p, qty: p.qty + 1 } : p)))
+                      }
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
               ))}
               <div className="border-t pt-3 flex items-center justify-between font-semibold">
-                <span>Subtotal</span><span>{currency(subtotal)}</span>
+                <span>Subtotal</span>
+                <span>{currency(subtotal)}</span>
               </div>
-              <button className="w-full py-3 rounded-xl bg-black text-white font-semibold">Finalizar pedido (simulado)</button>
+              <button className="w-full py-3 rounded-xl bg-black text-white font-semibold">
+                Finalizar pedido (simulado)
+              </button>
             </div>
           )}
         </aside>
@@ -226,8 +297,8 @@ export default function App(){
 }
 
 /** =================== Subcomponentes =================== **/
-function SectionTitle({ id, categories }){
-  const cat = categories.find(c=>c.id===id);
+function SectionTitle({ id, categories }) {
+  const cat = categories.find((c) => c.id === id);
   return (
     <div className="mb-2">
       <h2 className="text-2xl font-bold">{cat?.label}</h2>
@@ -236,12 +307,12 @@ function SectionTitle({ id, categories }){
   );
 }
 
-function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }){
+function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }) {
   const [editing, setEditing] = useState(false);
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border flex flex-col">
       <div className="h-36 w-full overflow-hidden">
-        <img src={item.img} alt={item.name} className="w-full h-full object-cover"/>
+        <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
       </div>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
@@ -250,60 +321,83 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete }){
             <span className="text-sm font-semibold">{currency(item.price)}</span>
           </div>
           <p className="text-sm text-neutral-600 mt-1 line-clamp-3">{item.desc}</p>
-          {!item.available && <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-neutral-100">Indisponível</span>}
+          {!item.available && (
+            <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-neutral-100">Indisponível</span>
+          )}
         </div>
         <div className="mt-3 flex items-center gap-2">
-          <button className="flex-1 py-2 rounded-xl border font-medium disabled:opacity-50" disabled={!item.available} onClick={()=>onAdd(item)}>Adicionar</button>
+          <button
+            className="flex-1 py-2 rounded-xl border font-medium disabled:opacity-50"
+            disabled={!item.available}
+            onClick={() => onAdd(item)}
+          >
+            Adicionar
+          </button>
           {isAdmin && (
             <>
-              <button className="px-3 py-2 rounded-xl border" onClick={()=>setEditing(true)}>Editar</button>
-              <button className="px-3 py-2 rounded-xl border" onClick={()=>onDelete(item.id)} title="Remover">🗑️</button>
+              <button className="px-3 py-2 rounded-xl border" onClick={() => setEditing(true)}>
+                Editar
+              </button>
+              <button className="px-3 py-2 rounded-xl border" onClick={() => onDelete(item.id)} title="Remover">
+                🗑️
+              </button>
             </>
           )}
         </div>
       </div>
-
       {editing && (
         <EditModal
           item={item}
-          onClose={()=>setEditing(false)}
-          onSave={(data)=>{ onEdit(data); setEditing(false); }}
+          onClose={() => setEditing(false)}
+          onSave={(data) => {
+            onEdit(data);
+            setEditing(false);
+          }}
         />
       )}
     </div>
   );
 }
 
-function EditModal({ item, onClose, onSave }){
-  const [form,setForm] = useState(item);
+function EditModal({ item, onClose, onSave }) {
+  const [form, setForm] = useState(item);
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3">
         <h3 className="text-lg font-semibold">Editar item</h3>
         <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm"><span className="text-neutral-500">Nome</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
+          <label className="text-sm">
+            <span className="text-neutral-500">Nome</span>
+            <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </label>
-          <label className="text-sm"><span className="text-neutral-500">Preço</span>
-            <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={e=>setForm({...form,price:parseFloat(e.target.value||0)})}/>
+          <label className="text-sm">
+            <span className="text-neutral-500">Preço</span>
+            <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value || 0) })} />
           </label>
-          <label className="text-sm col-span-2"><span className="text-neutral-500">Descrição</span>
-            <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})}/>
+          <label className="text-sm col-span-2">
+            <span className="text-neutral-500">Descrição</span>
+            <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
           </label>
-          <label className="text-sm col-span-2"><span className="text-neutral-500">URL da imagem</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={e=>setForm({...form,img:e.target.value})}/>
+          <label className="text-sm col-span-2">
+            <span className="text-neutral-500">URL da imagem</span>
+            <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={(e) => setForm({ ...form, img: e.target.value })} />
           </label>
-          <label className="text-sm"><span className="text-neutral-500">Categoria</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}/>
+          <label className="text-sm">
+            <span className="text-neutral-500">Categoria</span>
+            <input className="w-full border rounded-xl px-3 py-2" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
           </label>
           <label className="text-sm flex items-end gap-2">
-            <input type="checkbox" checked={form.available} onChange={e=>setForm({...form,available:e.target.checked})}/>
+            <input type="checkbox" checked={form.available} onChange={(e) => setForm({ ...form, available: e.target.checked })} />
             Disponível
           </label>
         </div>
         <div className="pt-2 flex items-center justify-end gap-2">
-          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
-          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>onSave(form)}>Salvar</button>
+          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={() => onSave(form)}>
+            Salvar
+          </button>
         </div>
       </div>
     </div>
@@ -311,40 +405,50 @@ function EditModal({ item, onClose, onSave }){
 }
 
 /** =================== Modais de criação =================== **/
-function NewCategoryModal({ categories, setCategories, onClose, setTab }){
+function NewCategoryModal({ categories, setCategories, onClose, setTab }) {
   const [label, setLabel] = useState("");
   const [id, setId] = useState("");
-  useEffect(()=> setId(slugify(label)), [label]);
+  useEffect(() => setId(slugify(label)), [label]);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3">
         <h3 className="text-lg font-semibold">Criar nova sessão</h3>
-        <label className="text-sm"><span className="text-neutral-500">Nome da sessão</span>
-          <input className="w-full border rounded-xl px-3 py-2" value={label} onChange={e=>setLabel(e.target.value)} placeholder="Ex.: Sobremesas"/>
+        <label className="text-sm">
+          <span className="text-neutral-500">Nome da sessão</span>
+          <input className="w-full border rounded-xl px-3 py-2" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex.: Sobremesas" />
         </label>
-        <label className="text-sm"><span className="text-neutral-500">ID (slug)</span>
-          <input className="w-full border rounded-xl px-3 py-2" value={id} onChange={e=>setId(slugify(e.target.value))} placeholder="ex.: sobremesas"/>
+        <label className="text-sm">
+          <span className="text-neutral-500">ID (slug)</span>
+          <input className="w-full border rounded-xl px-3 py-2" value={id} onChange={(e) => setId(slugify(e.target.value))} placeholder="ex.: sobremesas" />
         </label>
 
         <div className="pt-2 flex items-center justify-end gap-2">
-          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
-          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>{
-            if(!label || !id) return alert("Preencha nome e id.");
-            if(categories.some(c=>c.id===id)) return alert("Já existe uma sessão com esse ID.");
-            setCategories([...categories, { id, label }]);
-            setTab(id);
-            onClose();
-          }}>Criar</button>
+          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>
+            Cancelar
+          </button>
+          <button
+            className="px-4 py-2 rounded-xl bg-black text-white"
+            onClick={() => {
+              if (!label || !id) return alert("Preencha nome e id.");
+              if (categories.some((c) => c.id === id)) return alert("Já existe uma sessão com esse ID.");
+              const next = [...categories, { id, label }];
+              setCategories(next);
+              setTab(id);
+              onClose();
+            }}
+          >
+            Criar
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function NewItemModal({ currentCategory, categories, onClose, onSave }){
+function NewItemModal({ currentCategory, categories, onClose, onSave }) {
   const [form, setForm] = useState({
-    id: `id_${Math.random().toString(36).slice(2,8)}`,
+    id: `id_${Math.random().toString(36).slice(2, 8)}`,
     category: currentCategory,
     name: "",
     desc: "",
@@ -355,46 +459,66 @@ function NewItemModal({ currentCategory, categories, onClose, onSave }){
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3">
-        <h3 className="text-lg font-semibold">Novo item ({categories.find(c=>c.id===currentCategory)?.label})</h3>
+        <h3 className="text-lg font-semibold">Novo item ({categories.find((c) => c.id === currentCategory)?.label})</h3>
         <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm"><span className="text-neutral-500">Nome</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
+          <label className="text-sm">
+            <span className="text-neutral-500">Nome</span>
+            <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </label>
-          <label className="text-sm"><span className="text-neutral-500">Preço</span>
-            <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={e=>setForm({...form,price:parseFloat(e.target.value||0)})}/>
+          <label className="text-sm">
+            <span className="text-neutral-500">Preço</span>
+            <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value || 0) })} />
           </label>
-          <label className="text-sm col-span-2"><span className="text-neutral-500">Descrição</span>
-            <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})}/>
+          <label className="text-sm col-span-2">
+            <span className="text-neutral-500">Descrição</span>
+            <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
           </label>
-          <label className="text-sm col-span-2"><span className="text-neutral-500">URL da imagem</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={e=>setForm({...form,img:e.target.value})}/>
+          <label className="text-sm col-span-2">
+            <span className="text-neutral-500">URL da imagem</span>
+            <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={(e) => setForm({ ...form, img: e.target.value })} />
           </label>
           <label className="text-sm flex items-end gap-2">
-            <input type="checkbox" checked={form.available} onChange={e=>setForm({...form,available:e.target.checked})}/>
+            <input type="checkbox" checked={form.available} onChange={(e) => setForm({ ...form, available: e.target.checked })} />
             Disponível
           </label>
         </div>
         <div className="pt-2 flex items-center justify-end gap-2">
-          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
-          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=> onSave(form)}>Adicionar</button>
+          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={() => onSave(form)}>
+            Adicionar
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function ShareLinks(){
+function ShareLinks() {
   const base = `${window.location.origin}${window.location.pathname}`;
   const publicUrl = `${base}?access=${ACCESS_KEY}`;
   return (
     <div className="mt-3 flex items-center gap-3 justify-center">
-      <CopyButton label="Copiar link público" text={publicUrl}/>
+      <CopyButton label="Copiar link público" text={publicUrl} />
     </div>
   );
 }
-function CopyButton({ label, text }){
+
+function CopyButton({ label, text }) {
   return (
-    <button className="px-3 py-2 rounded-xl border text-xs" onClick={async()=>{ await navigator.clipboard.writeText(text); alert("Link copiado!\n"+text); }}>
+    <button
+      className="px-3 py-2 rounded-xl border text-xs"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          alert("Link copiado!\n" + text);
+        } catch {
+          // fallback
+          prompt("Copie o link:", text);
+        }
+      }}
+    >
       {label}
     </button>
   );
