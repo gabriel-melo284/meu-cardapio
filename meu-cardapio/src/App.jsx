@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import React, { useState } from "react";
 import { createPortal } from "react-dom";
 
+/* ===== Portal para garantir z-index máximo ===== */
 function ModalPortal({ children }) {
   if (typeof document === "undefined") return null;
   return createPortal(children, document.body);
@@ -387,6 +387,7 @@ export default function App(){
   );
 }
 
+/* ===== Utils: Drive link -> URL direta ===== */
 function driveToDirect(url) {
   try {
     if (!url) return url;
@@ -440,28 +441,33 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   );
 }
 
-/* ===== Modal de visualização — z-index ultralto ===== */
+/* ===== Modal de visualização — via Portal ===== */
 function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
   const [edit, setEdit] = useState(false);
   if(!item) return null;
   return (
-    <div className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-3 sm:p-6">
-      <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden z-[9999]">
-        <div className="relative">
-          <img src={item.img} alt={item.name} className="w-full h-64 sm:h-80 md:h-96 object-cover"/>
-          <button className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border" onClick={onClose}>Fechar</button>
-        </div>
-        <div className="p-4 sm:p-6 space-y-2">
-          <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
-          <div className="text-neutral-600">{item.desc}</div>
-          <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
-          <div className="flex items-center gap-2 pt-2">
-            <button className="px-4 py-2 rounded-xl bg-black text-white font-semibold" onClick={()=>onAdd(item)} disabled={!item.available}>
-              {item.available ? "Adicionar ao carrinho" : "Indisponível"}
-            </button>
-            {isAdmin && (
-              <button className="px-4 py-2 rounded-xl border" onClick={()=>setEdit(true)}>Editar</button>
-            )}
+    <ModalPortal>
+      <div className="fixed inset-0 z-[9999]">
+        <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+        <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
+          <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
+            <div className="relative">
+              <img src={item.img} alt={item.name} className="w-full h-64 sm:h-80 md:h-96 object-cover"/>
+              <button className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border" onClick={onClose}>Fechar</button>
+            </div>
+            <div className="p-4 sm:p-6 space-y-2">
+              <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
+              <div className="text-neutral-600">{item.desc}</div>
+              <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
+              <div className="flex items-center gap-2 pt-2">
+                <button className="px-4 py-2 rounded-xl bg-black text-white font-semibold" onClick={()=>onAdd(item)} disabled={!item.available}>
+                  {item.available ? "Adicionar ao carrinho" : "Indisponível"}
+                </button>
+                {isAdmin && (
+                  <button className="px-4 py-2 rounded-xl border" onClick={()=>setEdit(true)}>Editar</button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -473,78 +479,86 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
           onSave={(d)=>{ onEdit(d); setEdit(false); }}
         />
       )}
-    </div>
+    </ModalPortal>
   );
 }
 
-/* ===== Modal de edição — z-index ultralto ===== */
+/* ===== Modal de edição — via Portal ===== */
 function EditModal({ item, onClose, onSave }){
   const [form,setForm] = useState(item);
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={onClose}/>
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3 z-[9999]">
-        <h3 className="text-lg font-semibold">Editar item</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm"><span className="text-neutral-500">Nome</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
-          </label>
-          <label className="text-sm"><span className="text-neutral-500">Preço</span>
-            <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={e=>setForm({...form,price:parseFloat(e.target.value||0)})}/>
-          </label>
-          <label className="text-sm col-span-2"><span className="text-neutral-500">Descrição</span>
-            <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})}/>
-          </label>
-          <label className="text-sm col-span-2"><span className="text-neutral-500">URL da imagem</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={e=>setForm({...form,img:e.target.value})}/>
-          </label>
-          <label className="text-sm"><span className="text-neutral-500">Categoria</span>
-            <input className="w-full border rounded-xl px-3 py-2" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}/>
-          </label>
-          <label className="text-sm flex items-end gap-2">
-            <input type="checkbox" checked={form.available} onChange={e=>setForm({...form,available:e.target.checked})}/>
-            Disponível
-          </label>
-        </div>
-        <div className="pt-2 flex items-center justify-end gap-2">
-          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
-          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>onSave(form)}>Salvar</button>
+    <ModalPortal>
+      <div className="fixed inset-0 z-[9999]">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose}/>
+        <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
+          <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-lg p-6 space-y-3 shadow-2xl">
+            <h3 className="text-lg font-semibold">Editar item</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm"><span className="text-neutral-500">Nome</span>
+                <input className="w-full border rounded-xl px-3 py-2" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
+              </label>
+              <label className="text-sm"><span className="text-neutral-500">Preço</span>
+                <input type="number" step="0.01" className="w-full border rounded-xl px-3 py-2" value={form.price} onChange={e=>setForm({...form,price:parseFloat(e.target.value||0)})}/>
+              </label>
+              <label className="text-sm col-span-2"><span className="text-neutral-500">Descrição</span>
+                <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})}/>
+              </label>
+              <label className="text-sm col-span-2"><span className="text-neutral-500">URL da imagem</span>
+                <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={e=>setForm({...form,img:e.target.value})}/>
+              </label>
+              <label className="text-sm"><span className="text-neutral-500">Categoria</span>
+                <input className="w-full border rounded-xl px-3 py-2" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}/>
+              </label>
+              <label className="text-sm flex items-end gap-2">
+                <input type="checkbox" checked={form.available} onChange={e=>setForm({...form,available:e.target.checked})}/>
+                Disponível
+              </label>
+            </div>
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
+              <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>onSave(form)}>Salvar</button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
-/* ===== Modais de criação — z-index ultralto ===== */
+/* ===== Modais de criação — via Portal ===== */
 function NewCategoryModal({ categories, setCategories, onClose, setTab }){
   const [label, setLabel] = useState("");
   const [id, setId] = useState("");
   useEffect(()=> setId(slugify(label)), [label]);
 
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={onClose}/>
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3 z-[9999]">
-        <h3 className="text-lg font-semibold">Criar nova sessão</h3>
-        <label className="text-sm"><span className="text-neutral-500">Nome da sessão</span>
-          <input className="w-full border rounded-xl px-3 py-2" value={label} onChange={e=>setLabel(e.target.value)} placeholder="Ex.: Sobremesas"/>
-        </label>
-        <label className="text-sm"><span className="text-neutral-500">ID (slug)</span>
-          <input className="w-full border rounded-xl px-3 py-2" value={id} onChange={e=>setId(slugify(e.target.value))} placeholder="ex.: sobremesas"/>
-        </label>
-        <div className="pt-2 flex items-center justify-end gap-2">
-          <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
-          <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>{
-            if(!label||!id) return alert("Preencha nome e id.");
-            if(categories.some(c=>c.id===id)) return alert("Já existe uma sessão com esse ID.");
-            const next = [...categories, { id, label }];
-            setCategories(next);
-            setTab(id);
-            onClose();
-          }}>Criar</button>
+    <ModalPortal>
+      <div className="fixed inset-0 z-[9999]">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose}/>
+        <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
+          <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-md p-6 space-y-3 shadow-2xl">
+            <h3 className="text-lg font-semibold">Criar nova sessão</h3>
+            <label className="text-sm"><span className="text-neutral-500">Nome da sessão</span>
+              <input className="w-full border rounded-xl px-3 py-2" value={label} onChange={e=>setLabel(e.target.value)} placeholder="Ex.: Sobremesas"/>
+            </label>
+            <label className="text-sm"><span className="text-neutral-500">ID (slug)</span>
+              <input className="w-full border rounded-xl px-3 py-2" value={id} onChange={e=>setId(slugify(e.target.value))} placeholder="ex.: sobremesas"/>
+            </label>
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
+              <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>{
+                if(!label||!id) return alert("Preencha nome e id.");
+                if(categories.some(c=>c.id===id)) return alert("Já existe uma sessão com esse ID.");
+                const next = [...categories, { id, label }];
+                setCategories(next);
+                setTab(id);
+                onClose();
+              }}>Criar</button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
@@ -675,6 +689,4 @@ function NewItemModal({ currentCategory, categories = [], onClose, onSave }) {
       </div>
     </ModalPortal>
   );
-}
-
 }
