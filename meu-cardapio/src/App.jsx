@@ -11,13 +11,13 @@ const LS = {
 };
 
 const STORE = {
-  name: "Umami Fit - Gourmet",
-  address: "Santa Mônica",
-  city: "Uberlândia",
-  opensAt: "08:00",              // ajuste se quiser (formato HH:MM 24h)
+  name: "Umami Fit • Gourmet",
+  address: "Av. Exemplo, 1234",
+  city: "Sua Cidade",
+  opensAt: "08:00",
   closesAt: "18:00",
-  banner: "/banner.jpg",         // /public/banner.jpg
-  logo: "/umami-logo.png",       // /public/umami-logo.png
+  banner: "/banner.jpg",
+  logo: "/umami-logo.png",
 };
 
 /** =================== BASE =================== **/
@@ -80,22 +80,17 @@ export default function App(){
 
   const [categories, setCategories] = useState(()=> safeLoad(LS.cats(ACCESS_KEY), DEFAULT_CATEGORIES));
   const [menu,        setMenu]      = useState(()=> safeLoad(LS.menu(ACCESS_KEY), DEFAULT_MENU));
-  const [tab,         setTab]       = useState(()=> "principal"); // começa na Principal
+  const [tab,         setTab]       = useState(()=> "principal");
   const [query,       setQuery]     = useState("");
   const [cart,        setCart]      = useState([]);
 
-  // popups
   const [showNewCat,  setShowNewCat]  = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
-  const [newItemCat,  setNewItemCat]  = useState(""); // para criar item a partir da Principal
+  const [newItemCat,  setNewItemCat]  = useState("");
 
-  // modal de visualização do item
   const [viewItem, setViewItem] = useState(null);
-
-  // prioridade quando o usuário clica manualmente
   const [manualTabPriority, setManualTabPriority] = useState(false);
 
-  // abas incluindo a "Principal"
   const tabs = useMemo(() => [{ id:"principal", label:"Principal" }, ...categories], [categories]);
 
   useEffect(()=> safeSave(LS.cats(ACCESS_KEY), categories), [categories]);
@@ -113,26 +108,18 @@ export default function App(){
     );
   }
 
-  // auto-seleção de sessão na busca (se o usuário não clicou manualmente)
   useEffect(()=>{
     const q = query.trim().toLowerCase();
-    if(!q){
-      setManualTabPriority(false);
-      return;
-    }
+    if(!q){ setManualTabPriority(false); return; }
     if(manualTabPriority) return;
-
     const firstMatch = menu.find(i=>{
       if(!i.available) return false;
       const catLabel = categories.find(c=>c.id===i.category)?.label?.toLowerCase() || "";
       return (i.name||"").toLowerCase().includes(q) || (i.desc||"").toLowerCase().includes(q) || catLabel.includes(q);
     });
-    if(firstMatch && firstMatch.category !== tab){
-      setTab(firstMatch.category);
-    }
+    if(firstMatch && firstMatch.category !== tab) setTab(firstMatch.category);
   },[query, manualTabPriority, menu, categories, tab]);
 
-  // filtro da lista principal (quando há busca mostra resultados globais)
   const filtered = useMemo(()=>{
     const avail = menu.filter(i=>i.available);
     const q = query.trim().toLowerCase();
@@ -149,12 +136,11 @@ export default function App(){
   const subtotal  = cart.reduce((s,it)=> s + it.price*it.qty, 0);
   const upsertItem= (item)=> setMenu(prev=> prev.some(p=>p.id===item.id)? prev.map(p=>p.id===item.id?item:p) : [...prev, item]);
   const removeItem= (id)=> setMenu(prev=> prev.filter(p=>p.id!==id));
-
   const statusText = businessStatus(STORE.opensAt, STORE.closesAt);
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Banner estático com fallback */}
+      {/* Banner */}
       <div className="relative h-72 sm:h-80 md:h-96 overflow-hidden">
         <img
           src={STORE.banner}
@@ -167,39 +153,44 @@ export default function App(){
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl mx-auto w-full px-4 pb-6">
             <div className="flex items-center gap-4">
-              {/* LOGO BEM MAIOR */}
-              <img
-                src={STORE.logo}
-                alt="logo"
-                className="w-40 h-40 rounded-full ring-8 ring-white object-cover bg-white shadow-md"
-              />
+              <img src={STORE.logo} alt="logo" className="w-40 h-40 rounded-full ring-8 ring-white object-cover bg-white shadow-md"/>
               <div className="space-y-1">
                 <h1 className="text-white text-3xl sm:text-4xl md:text-5xl font-extrabold">{STORE.name}</h1>
                 <p className="text-white/95 text-base sm:text-lg md:text-xl font-medium">
                   {STORE.address} • {STORE.city}
                 </p>
-                <p className="text-white/90 text-sm sm:text-base md:text-lg font-semibold">
-                  {statusText}
-                </p>
+                <p className="text-white/90 text-sm sm:text-base md:text-lg font-semibold">{statusText}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Top bar: busca + tabs + (+) nova sessão se admin */}
+      {/* Top bar */}
       <div className="sticky top-0 z-30 bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <input
-            placeholder="Buscar no cardápio"
-            className="flex-1 rounded-full border px-4 py-3 text-base focus:outline-none"
-            value={query}
-            onChange={(e)=> setQuery(e.target.value)}
-          />
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="relative">
+            <input
+              placeholder="Buscar no cardápio"
+              className="w-full rounded-full border px-4 py-3 text-base focus:outline-none pr-12"
+              value={query}
+              onChange={(e)=> setQuery(e.target.value)}
+            />
+            {/* lupa com baixa transparência, só quando vazio */}
+            {!query.trim() && (
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 opacity-30">
+                {/* ícone SVG simples */}
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M20 20L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+            )}
+          </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 pb-3 overflow-x-auto">
           <div className="flex items-center gap-3">
-            {tabs.map(c=>(
+            {[{id:"principal",label:"Principal"}, ...categories].map(c=>(
               <button
                 key={c.id}
                 onClick={()=>{
@@ -226,9 +217,12 @@ export default function App(){
       {/* Conteúdo */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <SectionTitle id={tab} categories={tabs} />
+          <div className="mb-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold">
+              {([{id:"principal",label:"Principal"}, ...categories].find(c=>c.id===tab)?.label) || "Sessão"}
+            </h2>
+          </div>
 
-          {/* Botão + para criar item (não aparece na Principal) */}
           {!query.trim() && isAdmin && tab!=="principal" && (
             <button
               className="mb-4 w-11 h-11 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
@@ -237,13 +231,26 @@ export default function App(){
             >+</button>
           )}
 
-          {/* Principal como subseções (modo admin: mostra todas, mesmo vazias) */}
           {tab === "principal" && !query.trim() ? (
             <div className="space-y-8">
               {categories.map(cat=>{
                 const items = menu.filter(i=>i.available && i.category===cat.id);
                 const showSection = isAdmin ? true : items.length>0;
-                if(!showSection) return null;
+                if(!showSection) return (
+                  <div key={cat.id}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xl sm:text-2xl font-extrabold">{cat.label}</h3>
+                      {isAdmin && (
+                        <button
+                          className="w-10 h-10 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
+                          title={`Adicionar item em ${cat.label}`}
+                          onClick={()=>{ setNewItemCat(cat.id); setShowNewItem(true); }}
+                        >+</button>
+                      )}
+                    </div>
+                    {isAdmin && <div className="text-sm text-neutral-400 italic">Nenhum item nesta sessão.</div>}
+                  </div>
+                );
                 return (
                   <div key={cat.id}>
                     <div className="flex items-center justify-between mb-3">
@@ -271,12 +278,6 @@ export default function App(){
                           onView={setViewItem}
                         />
                       ))}
-                      {/* modo admin: seção vazia mostra apenas texto leve */}
-                      {isAdmin && items.length===0 && (
-                        <div className="text-sm text-neutral-400 italic">
-                          Nenhum item nesta sessão.
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
@@ -373,23 +374,6 @@ export default function App(){
 }
 
 /** =================== Subcomponentes =================== **/
-function SectionTitle({ id, categories }){
-  const cat = categories.find(c=>c.id===id);
-  return (
-    <div className="mb-3">
-      <h2 className="text-2xl sm:text-3xl font-extrabold">{cat?.label}</h2>
-    </div>
-  );
-}
-function SearchTitle({ query, count }){
-  return (
-    <div className="mb-3">
-      <h2 className="text-2xl sm:text-3xl font-extrabold">Resultados para “{query}”</h2>
-      <p className="text-sm text-neutral-500">{count} item(ns) encontrados</p>
-    </div>
-  );
-}
-
 function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   const [editing, setEditing] = useState(false);
   return (
@@ -416,6 +400,7 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
           )}
         </div>
       </div>
+
       {editing && (
         <EditModal
           item={item}
@@ -427,12 +412,12 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   );
 }
 
-/** ===== Modal de visualização (detalhes do item) ===== **/
+/** ===== Modal de visualização (detalhes do item) — z-index alto ===== **/
 function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
   const [edit, setEdit] = useState(false);
   if(!item) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3 sm:p-6">
+    <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-3 sm:p-6">
       <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden">
         <div className="relative">
           <img src={item.img} alt={item.name} className="w-full h-64 sm:h-80 md:h-96 object-cover"/>
@@ -464,12 +449,13 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
   );
 }
 
-/** ===== Modal de edição ===== **/
+/** ===== Modal de edição — z-index alto ===== **/
 function EditModal({ item, onClose, onSave }){
   const [form,setForm] = useState(item);
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/40 z-[105]" onClick={onClose}/>
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3 z-[110]">
         <h3 className="text-lg font-semibold">Editar item</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm"><span className="text-neutral-500">Nome</span>
@@ -501,15 +487,16 @@ function EditModal({ item, onClose, onSave }){
   );
 }
 
-/** ===== Modais de criação ===== **/
+/** ===== Modais de criação — z-index mais alto para sempre ficar por cima ===== **/
 function NewCategoryModal({ categories, setCategories, onClose, setTab }){
   const [label, setLabel] = useState("");
   const [id, setId] = useState("");
   useEffect(()=> setId(slugify(label)), [label]);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/40 z-[105]" onClick={onClose}/>
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3 z-[110]">
         <h3 className="text-lg font-semibold">Criar nova sessão</h3>
         <label className="text-sm"><span className="text-neutral-500">Nome da sessão</span>
           <input className="w-full border rounded-xl px-3 py-2" value={label} onChange={e=>setLabel(e.target.value)} placeholder="Ex.: Sobremesas"/>
@@ -540,8 +527,9 @@ function NewItemModal({ currentCategory, categories, onClose, onSave }){
     name: "", desc: "", price: 0, img: "", available: true,
   });
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/40 z-[105]" onClick={onClose}/>
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3 z-[110]">
         <h3 className="text-lg font-semibold">Novo item ({categories.find(c=>c.id===currentCategory)?.label})</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm"><span className="text-neutral-500">Nome</span>
