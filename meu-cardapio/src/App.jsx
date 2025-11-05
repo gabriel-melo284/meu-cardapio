@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 
 /* COMPONENTES PRINCIPAIS */
 import Banner from "./components/Banner";
@@ -51,7 +51,6 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("principal");
-  const [showCheckout, setShowCheckout] = useState(false);
 
   /* --- MODAIS --- */
   const [viewItem, setViewItem] = useState(null);
@@ -87,37 +86,6 @@ export default function App() {
     setCart([]);
   }
 
-  /* --- PEDIDO SEM PIX (dinheiro/cartão/retirada) --- */
-  function placeOrderWithoutPix(method) {
-    if (cart.length === 0) {
-      alert("Seu carrinho está vazio.");
-      return;
-    }
-    const orderId = "P" + Date.now();
-    const hoje = new Date();
-    const dataBR = hoje.toLocaleString("pt-BR");
-
-    const novoPedido = {
-      id: orderId,
-      data: dataBR,
-      items: cart,
-      total: subtotal,
-      pagamento: method, // ex.: "dinheiro", "cartão", "retirada"
-      status:
-        method === "dinheiro" || method === "cartão"
-          ? "pagamento na entrega"
-          : "aguardando retirada",
-      pix: null,
-    };
-
-    setOrders((prev) => [...prev, novoPedido]);
-    clearCart();
-    alert("Pedido registrado! Você pode acompanhar em 'Pedidos' (admin).");
-  }
-
-  /* ============================================================
-     ROTAS
-  ===============================================================*/
   if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center text-center p-6">
@@ -148,57 +116,45 @@ export default function App() {
     return <AdminOrders orders={orders} setOrders={setOrders} setPage={setPage} />;
   }
 
-  /* ============================================================
-     PÁGINA PRINCIPAL (MENU)
-  ===============================================================*/
+  /* --- PÁGINA PRINCIPAL (MENU) --- */
   return (
-    <>
-      {/* barra de ações fixa no topo e WhatsApp FAB */}
-      <TopBarActions
+    // reserva lateral p/ o carrinho fixo no desktop
+    <div className="min-h-screen bg-neutral-50 pr-0 md:pr-[380px]">
+      <Header isAdmin={isAdmin} onOpenOrders={() => setPage("pedidos")} />
+      <Banner />
+
+      <TopBarActions isAdmin={isAdmin} onOpenOrders={() => setPage("pedidos")} />
+
+      <SearchBar query={query} setQuery={setQuery} />
+
+      <Tabs
+        tab={tab}
+        setTab={setTab}
+        categories={categories}
+        query={query}
         isAdmin={isAdmin}
-        onGoAdmin={() => setPage("pedidos")}
+        setShowNewCat={setShowNewCat}
       />
-      <WhatsFab phone={STORE.whatsPhone || "+5534998970471"} msg="Olá! Gostaria de fazer um pedido." />
 
-      {/* reserva lateral p/ o carrinho fixo no desktop */}
-      <div className="min-h-screen bg-neutral-50 pr-0 md:pr-[380px]">
-        <Banner />
-        <Header />
-        <SearchBar query={query} setQuery={setQuery} />
+      <ProductList
+        menu={menu}
+        categories={categories}
+        tab={tab}
+        query={query}
+        addToCart={addToCart}
+        isAdmin={isAdmin}
+        setMenu={setMenu}
+        setViewItem={setViewItem}
+        setShowNewItem={setShowNewItem}
+        setNewItemCat={setNewItemCat}
+      />
 
-        <Tabs
-          tab={tab}
-          setTab={setTab}
-          categories={categories}
-          query={query}
-          isAdmin={isAdmin}
-          setShowNewCat={setShowNewCat}
-        />
-
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
-          <ProductList
-            menu={menu}
-            categories={categories}
-            tab={tab}
-            query={query}
-            addToCart={addToCart}
-            isAdmin={isAdmin}
-            setMenu={setMenu}
-            setViewItem={setViewItem}
-            setShowNewItem={setShowNewItem}
-            setNewItemCat={setNewItemCat}
-          />
-        </div>
-      </div>
-
-      {/* carrinho fixo à direita */}
       <Cart
         cart={cart}
         updateQty={updateQty}
         subtotal={subtotal}
+        setPage={setPage}
         isAdmin={isAdmin}
-        onCheckout={() => setShowCheckout(true)}
-        onGoAdmin={() => setPage("pedidos")}
       />
 
       {/* MODAIS */}
@@ -231,133 +187,45 @@ export default function App() {
         />
       )}
 
-      {/* Modal de escolha de pagamento */}
-      <CheckoutModal
-        open={showCheckout}
-        subtotal={subtotal}
-        onClose={() => setShowCheckout(false)}
-        onChoose={(method) => {
-          setShowCheckout(false);
-          if (method === "pix") {
-            setPage("pix");
-          } else {
-            placeOrderWithoutPix(method);
-          }
-        }}
-      />
-    </>
+      <WhatsFab phone={STORE.whatsPhone || "5534998970471"} />
+    </div>
   );
 }
 
-/* ============================================================
-   COMPONENTES INTERNOS — TopBarActions, WhatsFab e CheckoutModal
-==============================================================*/
-
-/* Botões do topo: Ver pedidos (admin) sempre visível */
-function TopBarActions({ isAdmin, onGoAdmin }) {
+/* =================== AUXILIAR: Ações de topo =================== */
+function TopBarActions({ isAdmin, onOpenOrders }) {
   return (
     <div className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
-      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
-        <div className="text-sm text-neutral-600">
-          Bem-vindo ao {STORE?.name || "Cardápio"}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <a
-            href={`https://wa.me/${(STORE.whatsPhone || "+5534998970471").replace(/[^\d]/g, "")}`}
-            target="_blank"
-            rel="noreferrer"
-            className="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl border hover:bg-neutral-50"
-            title="Falar no WhatsApp"
+      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-end gap-2">
+        {isAdmin && (
+          <button
+            onClick={onOpenOrders}
+            className="px-3 py-2 rounded-lg border text-sm font-semibold hover:bg-neutral-50"
+            title="Ver pedidos"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20.52 3.48A11.83 11.83 0 0012.06 0 11.94 11.94 0 000 11.95a11.8 11.8 0 001.57 5.9L0 24l6.33-1.64a11.9 11.9 0 005.73 1.47h.01c6.59 0 11.93-5.35 11.93-11.94a11.88 11.88 0 00-3.48-8.41zM12.07 21.4a9.41 9.41 0 01-4.79-1.31l-.34-.2-3.76.98 1-3.67-.22-.38a9.42 9.42 0 1117.22-4.89 9.42 9.42 0 01-9.11 9.47zm5.16-7.07c-.28-.14-1.66-.82-1.92-.91-.26-.1-.45-.14-.64.14-.2.29-.74.91-.9 1.1-.17.19-.33.21-.61.07-.28-.14-1.2-.44-2.28-1.41-.84-.75-1.4-1.67-1.56-1.95-.16-.29-.02-.45.12-.6.12-.12.28-.31.42-.46.14-.16.19-.27.28-.46.09-.2.05-.35-.02-.49-.08-.14-.64-1.54-.88-2.1-.23-.56-.47-.48-.65-.49h-.56c-.19 0-.49.07-.74.35-.26.28-.98.95-.98 2.31 0 1.36 1 2.67 1.14 2.86.14.19 1.96 2.98 4.76 4.17.67.29 1.19.46 1.6.59.67.21 1.27.18 1.75.11.53-.08 1.66-.68 1.9-1.34.24-.66.24-1.23.17-1.35-.07-.12-.26-.2-.54-.34z" />
-            </svg>
-            WhatsApp
-          </a>
-
-          {isAdmin && (
-            <button
-              onClick={onGoAdmin}
-              className="px-3 py-2 rounded-xl bg-black text-white text-sm font-semibold hover:opacity-90"
-              title="Ver pedidos (admin)"
-            >
-              Ver pedidos
-            </button>
-          )}
-        </div>
+            Ver pedidos
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-/* Botão flutuante do WhatsApp (mobile/desktop) */
-function WhatsFab({ phone, msg }) {
-  const to = `https://wa.me/${String(phone || "").replace(/[^\d]/g, "")}${
-    msg ? `?text=${encodeURIComponent(msg)}` : ""
-  }`;
+/* =================== AUXILIAR: FAB WhatsApp =================== */
+function WhatsFab({ phone }) {
+  const href = `https://wa.me/${phone.replace(/\D/g, "")}`;
   return (
     <a
-      href={to}
+      href={href}
       target="_blank"
       rel="noreferrer"
-      className="fixed bottom-4 right-4 z-40 inline-flex items-center justify-center w-14 h-14 rounded-full shadow-lg bg-green-500 text-white hover:bg-green-600 focus:outline-none"
-      title="Falar no WhatsApp"
+      className="fixed md:right-6 right-4 md:bottom-6 bottom-4 inline-flex items-center justify-center w-14 h-14 rounded-full shadow-lg bg-[#25D366]"
+      aria-label="WhatsApp"
     >
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M20.52 3.48A11.83 11.83 0 0012.06 0 11.94 11.94 0 000 11.95a11.8 11.8 0 001.57 5.9L0 24l6.33-1.64a11.9 11.9 0 005.73 1.47h.01c6.59 0 11.93-5.35 11.93-11.94a11.88 11.88 0 00-3.48-8.41zM12.07 21.4a9.41 9.41 0 01-4.79-1.31l-.34-.2-3.76.98 1-3.67-.22-.38a9.42 9.42 0 1117.22-4.89 9.42 9.42 0 01-9.11 9.47zm5.16-7.07c-.28-.14-1.66-.82-1.92-.91-.26-.1-.45-.14-.64.14-.2.29-.74.91-.9 1.1-.17.19-.33.21-.61.07-.28-.14-1.2-.44-2.28-1.41-.84-.75-1.4-1.67-1.56-1.95-.16-.29-.02-.45.12-.6.12-.12.28-.31.42-.46.14-.16.19-.27.28-.46.09-.2.05-.35-.02-.49-.08-.14-.64-1.54-.88-2.1-.23-.56-.47-.48-.65-.49h-.56c-.19 0-.49.07-.74.35-.26.28-.98.95-.98 2.31 0 1.36 1 2.67 1.14 2.86.14.19 1.96 2.98 4.76 4.17.67.29 1.19.46 1.6.59.67.21 1.27.18 1.75.11.53-.08 1.66-.68 1.9-1.34.24-.66.24-1.23.17-1.35-.07-.12-.26-.2-.54-.34z" />
+      {/* ícone oficial em SVG (contorno) */}
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+        <path fill="#fff" d="M19.11 17.39c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.47-.89-.79-1.49-1.77-1.67-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37 0-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.48-.5-.67-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.47s1.07 2.86 1.22 3.06c.15.2 2.1 3.22 5.1 4.52.71.31 1.26.49 1.69.62.71.23 1.35.2 1.86.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.08-.12-.27-.2-.57-.35zM26.7 5.3C23.9 2.5 20.2 1 16.2 1 8.5 1 2.3 7.2 2.3 14.9c0 2.4.6 4.8 1.8 6.9L2 31l9.4-2.5c2 .9 4.1 1.3 6.3 1.3 7.7 0 13.9-6.2 13.9-13.9 0-3.7-1.5-7.4-4.3-10.2zM16.7 27.7c-2 .0-3.9-.5-5.6-1.4l-.4-.2-5.5 1.5 1.5-5.3-.3-.4c-1.1-1.8-1.7-3.9-1.7-6 0-6.5 5.3-11.8 11.8-11.8 3.1 0 6.1 1.2 8.3 3.5 2.2 2.2 3.5 5.2 3.5 8.3 0 6.5-5.3 11.8-11.8 11.8z"/>
       </svg>
     </a>
-  );
-}
-
-/* Modal de escolha de pagamento */
-function CheckoutModal({ open, subtotal, onClose, onChoose }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50" />
-      <div
-        className="relative bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-extrabold">Como deseja pagar?</h3>
-        <p className="text-neutral-600 mt-1">Total: <b>R$ {subtotal.toFixed(2).replace(".", ",")}</b></p>
-
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            className="px-4 py-3 rounded-xl border font-semibold hover:bg-neutral-50"
-            onClick={() => onChoose("dinheiro")}
-          >
-            Dinheiro
-          </button>
-          <button
-            className="px-4 py-3 rounded-xl border font-semibold hover:bg-neutral-50"
-            onClick={() => onChoose("cartão")}
-          >
-            Cartão
-          </button>
-          <button
-            className="px-4 py-3 rounded-xl border font-semibold hover:bg-neutral-50"
-            onClick={() => onChoose("retirada")}
-          >
-            Retirar na loja
-          </button>
-          <button
-            className="px-4 py-3 rounded-xl bg-black text-white font-semibold hover:opacity-90"
-            onClick={() => onChoose("pix")}
-          >
-            PIX (gerar QR Code)
-          </button>
-        </div>
-
-        <button
-          className="mt-4 w-full py-2 rounded-xl border"
-          onClick={onClose}
-        >
-          Cancelar
-        </button>
-      </div>
-    </div>
   );
 }
