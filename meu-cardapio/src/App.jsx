@@ -496,28 +496,34 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
   const [imgSrc, setImgSrc] = useState(normalizeImageUrl(item?.img || ""));
   const [imgReady, setImgReady] = useState(false);
 
+  // Bloqueia o scroll do body enquanto o modal estiver aberto
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
+  // Garante que só mostramos o conteúdo quando a imagem estiver pronta
   useEffect(() => {
     setImgReady(false);
     const src = normalizeImageUrl(item?.img || "");
     setImgSrc(src);
 
-    // Garante onload dentro do modal antes de mostrar o conteúdo
     const probe = new Image();
     probe.onload = () => setImgReady(true);
     probe.onerror = () => {
       const fb = driveThumb(item?.img || "", 1600);
       setImgSrc(fb);
-      // tenta de novo com o fallback
       const probe2 = new Image();
       probe2.onload = () => setImgReady(true);
-      probe2.onerror = () => setImgReady(true); // último recurso: mostra sem a imagem válida
+      probe2.onerror = () => setImgReady(true);
       probe2.src = fb;
     };
     probe.src = src;
 
-    return () => {
-      setImgReady(false);
-    };
+    return () => setImgReady(false);
   }, [item]);
 
   if (!item) return null;
@@ -525,10 +531,10 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[9999]">
-        {/* Backdrop já aparece, bloqueando o fundo */}
+        {/* backdrop bloqueia o fundo */}
         <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-        {/* Enquanto a imagem não estiver pronta, mostramos só um loader centralizado */}
+        {/* enquanto carrega, mostra um loader */}
         {!imgReady && (
           <div className="absolute inset-0 flex items-center justify-center p-6">
             <div className="rounded-2xl bg-white/90 px-6 py-4 text-sm text-neutral-700 shadow-xl">
@@ -537,23 +543,23 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
           </div>
         )}
 
-        {/* Conteúdo só aparece quando a imagem estiver pronta */}
+        {/* conteúdo: caixa menor, com rolagem interna caso exceda */}
         {imgReady && (
           <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
-            <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
+            <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden
+                            flex flex-col max-h-[85vh]">
+              {/* área da imagem */}
               <div className="relative">
                 <div className="w-full bg-black flex items-center justify-center">
                   <img
                     src={imgSrc}
                     alt={item.name}
-                    className="max-h-[80vh] w-auto object-contain"
+                    className="w-auto max-h-[60vh] object-contain"
+                    decoding="async"
                     onError={(e) => {
                       const fb = driveThumb(item.img, 1600);
-                      if (e.currentTarget.src !== fb) {
-                        e.currentTarget.src = fb;
-                      }
+                      if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
                     }}
-                    decoding="async"
                   />
                 </div>
                 <button
@@ -564,10 +570,12 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
                 </button>
               </div>
 
-              <div className="p-4 sm:p-6 space-y-2">
+              {/* detalhes: rolagem interna se necessário */}
+              <div className="p-4 sm:p-6 space-y-2 overflow-auto">
                 <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
                 <div className="text-neutral-600">{item.desc}</div>
                 <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
+
                 <div className="flex items-center gap-2 pt-2">
                   <button
                     className="px-4 py-2 rounded-xl bg-black text-white font-semibold"
@@ -576,8 +584,12 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
                   >
                     {item.available ? "Adicionar ao carrinho" : "Indisponível"}
                   </button>
+
                   {isAdmin && (
-                    <button className="px-4 py-2 rounded-xl border" onClick={() => setEdit(true)}>
+                    <button
+                      className="px-4 py-2 rounded-xl border"
+                      onClick={() => setEdit(true)}
+                    >
                       Editar
                     </button>
                   )}
@@ -601,6 +613,7 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
     </ModalPortal>
   );
 }
+
 
 
 /* ===== Modal de edição — via Portal ===== */
