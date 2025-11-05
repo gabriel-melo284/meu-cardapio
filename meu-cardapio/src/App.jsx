@@ -556,30 +556,32 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
             }`}
             onClick={(e) => e.stopPropagation()} // impede bolha; clique aqui NÃO fecha
           >
-            {/* área da imagem */}
-            <div className="relative">
-              <div className="w-full bg-white">
-                <img
-                  ref={imgRef}
-                  src={src}
-                  alt={item.name}
-                  className="w-auto max-h-[60vh] object-contain"
-                  decoding="async"
-                  onLoad={() => requestAnimationFrame(() => setPainted(true))}
-                  onError={(e) => {
-                    const fb = driveThumb(item.img, 1600);
-                    if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
-                    else requestAnimationFrame(() => setPainted(true));
-                  }}
-                />
-              </div>
-              <button
-                className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border"
-                onClick={onClose}
-              >
-                Fechar
-              </button>
+            {/* área da imagem — centralizada */}
+          <div className="relative">
+            <div className="w-full bg-white flex items-center justify-center">
+              <img
+                ref={imgRef}
+                src={src}
+                alt={item.name}
+                className="block mx-auto max-w-full max-h-[60vh] object-contain"
+                decoding="async"
+                onLoad={() => requestAnimationFrame(() => setPainted(true))}
+                onError={(e) => {
+                  const fb = driveThumb(item.img, 1600);
+                  if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                  else requestAnimationFrame(() => setPainted(true));
+                }}
+              />
             </div>
+        
+            <button
+              className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border"
+              onClick={onClose}
+            >
+              Fechar
+            </button>
+          </div>
+
   
             {/* detalhes */}
             <div className="p-4 sm:p-6 space-y-2 overflow-auto">
