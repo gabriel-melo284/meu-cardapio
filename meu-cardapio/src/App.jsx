@@ -11,9 +11,9 @@ const LS = {
 };
 
 const STORE = {
-  name: "Umami Fit • Gourmet",
-  address: "Av. Exemplo, 1234",
-  city: "Sua Cidade",
+  name: "Umami Fit - Gourmet",
+  address: "Santa Mônica",
+  city: "Uberlândia",
   opensAt: "08:00",              // ajuste se quiser (formato HH:MM 24h)
   closesAt: "18:00",
   banner: "/banner.jpg",         // /public/banner.jpg
