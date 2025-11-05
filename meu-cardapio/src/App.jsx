@@ -153,7 +153,7 @@ export default function App(){
   const hasAccess = getParam("access") === ACCESS_KEY;
   const isAdmin   = hasAccess && getParam("admin") === ADMIN_KEY;
 
-  const WHATSAPP_NUMBER = "5534998974071"; // <- coloque o seu número aqui
+  const WHATSAPP_NUMBER = "5534996439101"; // <- coloque o seu número aqui
 
   const [categories, setCategories] = useState(()=> safeLoad(LS.cats(ACCESS_KEY), DEFAULT_CATEGORIES));
   const [menu,        setMenu]      = useState(()=> safeLoad(LS.menu(ACCESS_KEY), DEFAULT_MENU));
