@@ -1,10 +1,8 @@
-// src/helpers/utils.js
-
 // Moeda BRL
 export const currency = (n) =>
   Number(n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-// Query param do URL
+// Query param
 export const getParam = (k) => {
   try {
     return new URL(window.location.href).searchParams.get(k);
@@ -13,7 +11,7 @@ export const getParam = (k) => {
   }
 };
 
-// HH:MM -> Date de hoje com esse horário
+// Transformar HH:MM → Date
 export const parseHM = (hm) => {
   const [h, m] = String(hm || "00:00").split(":").map(Number);
   const d = new Date();
@@ -21,7 +19,7 @@ export const parseHM = (hm) => {
   return d;
 };
 
-// Texto -> slug
+// ✅ ESTA FUNÇÃO PRECISAVA SER EXPORTADA!
 export const slugify = (t) =>
   String(t || "")
     .toLowerCase()
