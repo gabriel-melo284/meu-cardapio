@@ -448,16 +448,10 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   const [editing, setEditing] = useState(false);
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border flex flex-col">
-      <button className="h-40 w-full overflow-hidden" onClick={()=>onView(item)}>
-        <img
-          src={normalizeImageUrl(item.img)}
-          alt={item.name}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            const id = extractDriveId(item.img);
-            if (id) e.currentTarget.src = driveThumb(item.img, 1600);
-          }}
-        />
+      <button className="w-full" onClick={()=>onView(item)}>
+        <SmartImage src={item.img} alt={item.name} />
+      </button>
+
       </button>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
@@ -550,18 +544,10 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
                             flex flex-col max-h-[85vh]">
               {/* área da imagem */}
               <div className="relative">
-                <div className="w-full bg-black flex items-center justify-center">
-                  <img
-                    src={imgSrc}
-                    alt={item.name}
-                    className="w-auto max-h-[60vh] object-contain"
-                    decoding="async"
-                    onError={(e) => {
-                      const fb = driveThumb(item.img, 1600);
-                      if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
-                    }}
-                  />
+                <div className="w-full bg-white">
+                  <SmartImage src={item.img} alt={item.name} maxHeightVH={60} />
                 </div>
+
                 <button
                   className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border"
                   onClick={onClose}
@@ -692,6 +678,73 @@ function NewCategoryModal({ categories, setCategories, onClose, setTab }){
         </div>
       </div>
     </ModalPortal>
+  );
+}
+
+function SmartImage({
+  src,
+  alt = "",
+  className = "",
+  maxHeightVH = 0, // ex.: 60 limita a 60vh no modal; 0 = sem limite
+}) {
+  const [ratio, setRatio] = React.useState(null); // w/h
+  const [imgSrc, setImgSrc] = React.useState(normalizeImageUrl(src));
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const primary = normalizeImageUrl(src);
+    const probe = new Image();
+    probe.onload = () => {
+      if (cancelled) return;
+      const r = probe.naturalWidth && probe.naturalHeight
+        ? probe.naturalWidth / probe.naturalHeight
+        : null;
+      setRatio(r);
+      setImgSrc(primary);
+    };
+    probe.onerror = () => {
+      if (cancelled) return;
+      const fb = driveThumb(src, 1600);
+      const probe2 = new Image();
+      probe2.onload = () => {
+        if (cancelled) return;
+        const r = probe2.naturalWidth && probe2.naturalHeight
+          ? probe2.naturalWidth / probe2.naturalHeight
+          : null;
+        setRatio(r);
+        setImgSrc(fb);
+      };
+      probe2.onerror = () => {
+        if (cancelled) return;
+        setRatio(null);
+        setImgSrc(primary); // último recurso
+      };
+      probe2.src = fb;
+    };
+    probe.src = primary;
+    return () => { cancelled = true; };
+  }, [src]);
+
+  // Sem ratio ainda? Evita "flash": reserva área mínima
+  const wrapperStyle = {
+    aspectRatio: ratio ? `${ratio}` : undefined,
+    maxHeight: maxHeightVH ? `${maxHeightVH}vh` : undefined,
+  };
+
+  return (
+    <div className={`relative w-full ${className}`} style={wrapperStyle}>
+      <img
+        src={imgSrc}
+        alt={alt}
+        className="block w-full h-auto object-contain"
+        style={maxHeightVH ? { maxHeight: `${maxHeightVH}vh` } : undefined}
+        onError={(e) => {
+          const fb = driveThumb(src, 1600);
+          if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
+        }}
+        decoding="async"
+      />
+    </div>
   );
 }
 
