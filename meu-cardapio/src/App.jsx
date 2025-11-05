@@ -35,8 +35,9 @@ const STORE = {
   city: "Uberlândia",
   opensAt: "08:00",
   closesAt: "18:00",
-  banner: "/banner.jpg",
-  logo: "/umami-logo.png",     // /public/umami-logo.png
+  // usa helper para funcionar em qualquer ambiente
+  banner: publicAsset("banner_1584x396.jpg"), // ou "banner_1584x396.webp"
+  logo: publicAsset("umami-logo.png"),
 };
 
 /* =================== BASE =================== */
@@ -220,16 +221,19 @@ export default function App(){
     <div className="min-h-screen bg-neutral-50">
       {/* Banner (30% menor) */}
       <div className="relative z-0 h-52 sm:h-56 md:h-64 overflow-hidden">
-        <img
-          src={STORE.banner}
-          alt="banner"
-          className="w-full h-full object-cover"
-          onError={(e)=>{ /* fallback */ }}
-        />
-        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-      </div>
-
-
+      <img
+        src={`${STORE.banner}?v=1`} // cache-busting simples
+        alt="banner"
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          // Fallback leve (gradiente)
+          e.currentTarget.onerror = null;
+          e.currentTarget.src =
+            "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1584 396'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%23ffe08a'/><stop offset='1' stop-color='%23ffb347'/></linearGradient></defs><rect width='1584' height='396' fill='url(%23g)'/></svg>";
+        }}
+      />
+      <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+    </div>
       
       {/* Header da loja (fora do banner) */}
       <div className="bg-white relative z-10">
