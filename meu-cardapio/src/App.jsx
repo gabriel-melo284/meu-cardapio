@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 /* COMPONENTES PRINCIPAIS */
 import Banner from "./components/Banner";
@@ -21,50 +21,102 @@ import NewCategoryModal from "./components/NewCategoryModal";
 /* HELPERS */
 import { load, save } from "./helpers/storage";
 import { getParam } from "./helpers/utils";
+import { fetchRemoteData, saveRemoteData } from "./helpers/api";
 
 /* CONFIG */
 import { STORE, DEFAULT_CATEGORIES, DEFAULT_MENU, LS } from "./helpers/config";
 
 /* ============================================================
-   APLICATIVO PRINCIPAL — MENU + ADMIN + PIX
+   APLICATIVO PRINCIPAL — MENU + ADMIN + PIX (com persistência remota)
 ==============================================================*/
 
 export default function App() {
-  /* --- ACESSO --- */
   const hasAccess = getParam("access") === "umami";
   const isAdmin = hasAccess && getParam("admin") === "admin";
 
-  /* --- ROTAS INTERNAS --- */
   const [page, setPage] = useState("menu"); // "menu" | "pix" | "pedidos"
 
-  /* --- ESTADOS DE DADOS --- */
+  // Dados base
   const [categories, setCategories] = useState(() =>
     load(LS.cats("umami"), DEFAULT_CATEGORIES)
   );
   const [menu, setMenu] = useState(() =>
     load(LS.menu("umami"), DEFAULT_MENU)
   );
-  const [orders, setOrders] = useState(() =>
-    load(LS.orders("umami"), [])
-  );
+  const [orders, setOrders] = useState(() => load(LS.orders("umami"), []));
 
-  /* --- UI STATE --- */
+  // UI
   const [cart, setCart] = useState([]);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("principal");
 
-  /* --- MODAIS --- */
+  // Modais
   const [viewItem, setViewItem] = useState(null);
   const [showNewCat, setShowNewCat] = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemCat, setNewItemCat] = useState("");
 
-  /* --- PERSISTÊNCIA --- */
+  /* ---------- Fallback local sempre atualizado ---------- */
   useEffect(() => save(LS.cats("umami"), categories), [categories]);
   useEffect(() => save(LS.menu("umami"), menu), [menu]);
   useEffect(() => save(LS.orders("umami"), orders), [orders]);
 
-  /* --- CARRINHO --- */
+  /* ---------- Carrega dados remotos na entrada ---------- */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const remote = await fetchRemoteData();
+        if (!alive) return;
+
+        // Se o remoto estiver vazio, publica seu estado atual
+        const isEmpty =
+          !remote ||
+          (!remote.categories?.length &&
+            !remote.menu?.length &&
+            !remote.orders?.length);
+
+        if (isEmpty) {
+          await saveRemoteData({
+            categories,
+            menu,
+            orders,
+          });
+        } else {
+          // Senão, aplica o remoto e atualiza seu local
+          setCategories(remote.categories ?? DEFAULT_CATEGORIES);
+          setMenu(remote.menu ?? DEFAULT_MENU);
+          setOrders(remote.orders ?? []);
+        }
+      } catch {
+        // Se falhar, continua com o localStorage
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---------- Debounce para salvar remoto ---------- */
+  const saveTimer = useRef(null);
+  function scheduleRemoteSave(next) {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await saveRemoteData(next);
+      } catch {
+        // silencioso: mantém local
+      }
+    }, 500);
+  }
+
+  useEffect(() => {
+    scheduleRemoteSave({ categories, menu, orders });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, menu, orders]);
+
+  /* ---------- Carrinho ---------- */
   const subtotal = cart.reduce((t, i) => t + i.price * i.qty, 0);
 
   function addToCart(item) {
@@ -87,15 +139,13 @@ export default function App() {
     setCart([]);
   }
 
-  /* --- ROTAS --- */
+  /* ---------- Rotas ---------- */
   if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center text-center p-6">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md">
           <h1 className="text-2xl font-bold mb-2">Acesso restrito</h1>
-          <p className="text-neutral-600">
-            Use <b>?access=umami</b> no link.
-          </p>
+          <p className="text-neutral-600">Use <b>?access=umami</b> no link.</p>
         </div>
       </div>
     );
@@ -118,7 +168,6 @@ export default function App() {
     return <AdminOrders orders={orders} setOrders={setOrders} setPage={setPage} />;
   }
 
-  /* --- PÁGINA PRINCIPAL (MENU) --- */
   return (
     <div className="min-h-screen bg-neutral-50 pb-24">
       <Banner />
@@ -135,40 +184,28 @@ export default function App() {
         setShowNewCat={setShowNewCat}
       />
 
-      {/* ====== CONTAINER DA LISTA + CARRINHO (lado a lado) ====== */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-          {/* Coluna esquerda: LISTA */}
-          <div>
-            <ProductList
-              menu={menu}
-              categories={categories}
-              tab={tab}
-              query={query}
-              addToCart={addToCart}
-              isAdmin={isAdmin}
-              setMenu={setMenu}
-              setViewItem={setViewItem}
-              setShowNewItem={setShowNewItem}
-              setNewItemCat={setNewItemCat}
-            />
-          </div>
+      <ProductList
+        menu={menu}
+        categories={categories}
+        tab={tab}
+        query={query}
+        addToCart={addToCart}
+        isAdmin={isAdmin}
+        setMenu={setMenu}
+        setViewItem={setViewItem}
+        setShowNewItem={setShowNewItem}
+        setNewItemCat={setNewItemCat}
+      />
 
-          {/* Coluna direita: CARRINHO fixo */}
-          <aside className="bg-white rounded-2xl shadow-sm p-4 h-max sticky top-24">
-            <Cart
-              cart={cart}
-              updateQty={updateQty}
-              subtotal={subtotal}
-              setPage={setPage}
-              isAdmin={isAdmin}
-            />
-          </aside>
-        </div>
-      </div>
-      {/* ========================================================= */}
+      <Cart
+        cart={cart}
+        updateQty={updateQty}
+        subtotal={subtotal}
+        setPage={setPage}
+        isAdmin={isAdmin}
+      />
 
-      {/* MODAIS */}
+      {/* Modais */}
       {viewItem && (
         <ItemViewModal
           item={viewItem}
