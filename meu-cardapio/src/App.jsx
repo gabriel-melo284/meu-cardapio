@@ -205,16 +205,17 @@ export default function App(){
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Banner (somente imagem de fundo, sem conteúdo por cima) */}
-      <div className="relative z-0 h-72 sm:h-80 md:h-96 overflow-hidden">
+      {/* Banner (30% menor) */}
+      <div className="relative z-0 h-52 sm:h-56 md:h-64 overflow-hidden">
         <img
           src={STORE.banner}
           alt="banner"
           className="w-full h-full object-cover"
-          onError={(e)=>{ /* seu fallback */ }}
+          onError={(e)=>{ /* fallback */ }}
         />
         <div className="absolute inset-0 bg-black/20 pointer-events-none" />
       </div>
+
 
       
       {/* Header da loja (fora do banner) */}
