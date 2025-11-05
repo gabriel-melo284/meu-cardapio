@@ -135,26 +135,38 @@ export default function App() {
         setShowNewCat={setShowNewCat}
       />
 
-      <ProductList
-        menu={menu}
-        categories={categories}
-        tab={tab}
-        query={query}
-        addToCart={addToCart}
-        isAdmin={isAdmin}
-        setMenu={setMenu}
-        setViewItem={setViewItem}
-        setShowNewItem={setShowNewItem}
-        setNewItemCat={setNewItemCat}
-      />
+      {/* ====== CONTAINER DA LISTA + CARRINHO (lado a lado) ====== */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+          {/* Coluna esquerda: LISTA */}
+          <div>
+            <ProductList
+              menu={menu}
+              categories={categories}
+              tab={tab}
+              query={query}
+              addToCart={addToCart}
+              isAdmin={isAdmin}
+              setMenu={setMenu}
+              setViewItem={setViewItem}
+              setShowNewItem={setShowNewItem}
+              setNewItemCat={setNewItemCat}
+            />
+          </div>
 
-      <Cart
-        cart={cart}
-        updateQty={updateQty}
-        subtotal={subtotal}
-        setPage={setPage}
-        isAdmin={isAdmin}
-      />
+          {/* Coluna direita: CARRINHO fixo */}
+          <aside className="bg-white rounded-2xl shadow-sm p-4 h-max sticky top-24">
+            <Cart
+              cart={cart}
+              updateQty={updateQty}
+              subtotal={subtotal}
+              setPage={setPage}
+              isAdmin={isAdmin}
+            />
+          </aside>
+        </div>
+      </div>
+      {/* ========================================================= */}
 
       {/* MODAIS */}
       {viewItem && (
