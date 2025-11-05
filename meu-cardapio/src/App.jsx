@@ -483,16 +483,17 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
         <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
           <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
             <div className="relative">
-              <img
-                src={normalizeImageUrl(item.img)}
-                alt={item.name}
-                className="w-full h-64 sm:h-80 md:h-96 object-cover"
-                onError={(e) => {
-                  const id = extractDriveId(item.img);
-                  if (id) e.currentTarget.src = driveThumb(item.img, 1600);
-                }}
-              />
-
+              <div className="w-full bg-black flex items-center justify-center">
+                <img
+                  src={normalizeImageUrl(item.img)}
+                  alt={item.name}
+                  className="max-h-[80vh] w-auto object-contain"
+                  onError={(e) => {
+                    const id = extractDriveId(item.img);
+                    if (id) e.currentTarget.src = driveThumb(item.img, 1600);
+                  }}
+                />
+            </div>
               <button className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border" onClick={onClose}>Fechar</button>
             </div>
             <div className="p-4 sm:p-6 space-y-2">
