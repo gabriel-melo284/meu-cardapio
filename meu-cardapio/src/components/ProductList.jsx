@@ -1,7 +1,4 @@
-// src/components/ProductList.jsx
-import React from "react";
 import CardItem from "./CardItem";
-import { currency } from "../helpers/utils";
 
 export default function ProductList({
   menu,
@@ -15,62 +12,69 @@ export default function ProductList({
   setShowNewItem,
   setNewItemCat,
 }) {
-  const q = query.trim().toLowerCase();
+  const itemsAvail = menu.filter((i) => i.available);
 
-  const visibleItems = menu
-    .filter((i) => i.available)
-    .filter((i) => (tab === "principal" ? true : i.category === tab))
-    .filter((i) =>
-      q
-        ? i.name.toLowerCase().includes(q) ||
-          (i.desc || "").toLowerCase().includes(q)
-        : true
+  const filtered = (() => {
+    const q = query.trim().toLowerCase();
+    let base =
+      tab === "principal" ? itemsAvail : itemsAvail.filter((i) => i.category === tab);
+    if (!q) return base;
+    return base.filter(
+      (i) =>
+        (i.name || "").toLowerCase().includes(q) ||
+        (i.desc || "").toLowerCase().includes(q) ||
+        (categories.find((c) => c.id === i.category)?.label || "")
+          .toLowerCase()
+          .includes(q)
     );
+  })();
 
-  // Listagem por sessão na aba "principal"
-  if (tab === "principal" && !q) {
+  const showAddItemButton = (catId) => (
+    isAdmin && (
+      <button
+        title="Adicionar item"
+        onClick={() => {
+          setNewItemCat(catId);
+          setShowNewItem(true);
+        }}
+        className="ml-2 inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
+      >
+        +
+      </button>
+    )
+  );
+
+  // GRADE padronizada de cartas menores
+  const Grid = ({ children }) => (
+    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">{children}</div>
+  );
+
+  if (tab === "principal" && !query.trim()) {
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-10">
+      <div className="space-y-8">
         {categories.map((cat) => {
-          const items = menu.filter(
-            (i) => i.available && i.category === cat.id
-          );
-          const showSection = isAdmin ? true : items.length > 0;
+          const list = itemsAvail.filter((i) => i.category === cat.id);
+          const showSection = isAdmin ? true : list.length > 0;
+          if (!showSection) return null;
 
-          if (!showSection) {
-            return (
-              <div key={cat.id}>
-                <SectionHeader
-                  title={cat.label}
-                  isAdmin={isAdmin}
-                  onAdd={() => {
-                    setNewItemCat(cat.id);
-                    setShowNewItem(true);
-                  }}
-                />
-                {isAdmin && (
+          return (
+            <section key={cat.id}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xl sm:text-2xl font-extrabold">{cat.label}</h3>
+                {showAddItemButton(cat.id)}
+              </div>
+
+              {list.length === 0 ? (
+                isAdmin ? (
                   <div className="text-sm text-neutral-400 italic">
                     Nenhum item nesta sessão.
                   </div>
-                )}
-              </div>
-            );
-          }
-
-          return (
-            <div key={cat.id}>
-              <SectionHeader
-                title={cat.label}
-                isAdmin={isAdmin}
-                onAdd={() => {
-                  setNewItemCat(cat.id);
-                  setShowNewItem(true);
-                }}
-              />
-              <Grid>
-                {items.map((item) => (
-                  <div key={item.id} className="h-full">
+                ) : null
+              ) : (
+                <Grid>
+                  {list.map((item) => (
                     <CardItem
+                      key={item.id}
                       item={item}
                       onAdd={addToCart}
                       isAdmin={isAdmin}
@@ -80,68 +84,46 @@ export default function ProductList({
                       onDelete={(id) =>
                         setMenu((prev) => prev.filter((p) => p.id !== id))
                       }
-                      onView={(i) => setViewItem(i)}
+                      onView={setViewItem}
                     />
-                  </div>
-                ))}
-              </Grid>
-            </div>
+                  ))}
+                </Grid>
+              )}
+            </section>
           );
         })}
       </div>
     );
   }
 
-  // Listagem simples (quando filtra por aba ou busca)
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
-      <Grid>
-        {visibleItems.map((item) => (
-          <div key={item.id} className="h-full">
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-2xl font-extrabold">
+          {tab === "principal"
+            ? "Resultado da busca"
+            : categories.find((c) => c.id === tab)?.label}
+        </h2>
+        {tab !== "principal" && showAddItemButton(tab)}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-neutral-500 py-8">Nenhum item encontrado.</div>
+      ) : (
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((item) => (
             <CardItem
+              key={item.id}
               item={item}
               onAdd={addToCart}
               isAdmin={isAdmin}
-              onEdit={(u) =>
-                setMenu((prev) => prev.map((p) => (p.id === u.id ? u : p)))
-              }
-              onDelete={(id) =>
-                setMenu((prev) => prev.filter((p) => p.id !== id))
-              }
-              onView={(i) => setViewItem(i)}
+              onEdit={(u) => setMenu((prev) => prev.map((p) => (p.id === u.id ? u : p)))}
+              onDelete={(id) => setMenu((prev) => prev.filter((p) => p.id !== id))}
+              onView={setViewItem}
             />
-          </div>
-        ))}
-      </Grid>
-    </div>
-  );
-}
-
-/* --------- UI helpers --------- */
-
-function SectionHeader({ title, isAdmin, onAdd }) {
-  return (
-    <div className="flex items-center justify-between mb-3">
-      <h3 className="text-xl sm:text-2xl font-extrabold">{title}</h3>
-      {isAdmin && (
-        <button
-          onClick={onAdd}
-          className="w-10 h-10 rounded-full bg-orange-500 text-white shadow hover:bg-orange-600 flex items-center justify-center"
-          title="Adicionar item"
-          aria-label="Adicionar item"
-        >
-          {/* só o “+” sem texto */}
-          +
-        </button>
+          ))}
+        </div>
       )}
-    </div>
-  );
-}
-
-function Grid({ children }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 [grid-auto-rows:1fr] items-stretch">
-      {children}
-    </div>
+    </>
   );
 }
