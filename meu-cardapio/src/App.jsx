@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 
 /* ===== Portal para garantir z-index máximo ===== */
@@ -148,21 +148,26 @@ export default function App(){
     );
   }
 
-  // Abre o modal somente quando a imagem estiver carregada
+  // Abre o modal somente quando a imagem estiver 100% pré-carregada (primary ou fallback)
   const openItemModal = async (item) => {
     const primary = normalizeImageUrl(item.img);
     try {
       await preloadImage(primary);
-      setViewItem({ ...item, img: primary });
+      setViewItem({ ...item, img: primary, __preloaded: true });
+      return;
     } catch {
       const fallback = driveThumb(item.img, 1600);
       try {
         await preloadImage(fallback);
-        setViewItem({ ...item, img: fallback });
+        setViewItem({ ...item, img: fallback, __preloaded: true });
+        return;
       } catch {
-        setViewItem(item);
+        // último recurso: abre mesmo assim
+        setViewItem({ ...item, __preloaded: false });
       }
     }
+  };
+
   };
 
   // Busca global auto-seleciona sessão (a menos que o usuário clique numa guia)
@@ -509,8 +514,8 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }) {
 /* ===== Modal de visualização — via Portal ===== */
 function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
   const [edit, setEdit] = useState(false);
-  const [imgSrc, setImgSrc] = useState(normalizeImageUrl(item?.img || ""));
-  const [imgReady, setImgReady] = useState(false);
+  const [painted, setPainted] = useState(false);
+  const imgRef = useRef(null);
 
   // Bloqueia o scroll do body enquanto o modal estiver aberto
   useEffect(() => {
@@ -521,28 +526,21 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
     };
   }, []);
 
-  // Garante que só mostramos o conteúdo quando a imagem estiver pronta
+  // Quando o item muda, aguardamos a imagem "pintar" para mostrar tudo junto
   useEffect(() => {
-    setImgReady(false);
-    const src = normalizeImageUrl(item?.img || "");
-    setImgSrc(src);
-
-    const probe = new Image();
-    probe.onload = () => setImgReady(true);
-    probe.onerror = () => {
-      const fb = driveThumb(item?.img || "", 1600);
-      setImgSrc(fb);
-      const probe2 = new Image();
-      probe2.onload = () => setImgReady(true);
-      probe2.onerror = () => setImgReady(true);
-      probe2.src = fb;
-    };
-    probe.src = src;
-
-    return () => setImgReady(false);
-  }, [item]);
+    setPainted(false);
+    // se a imagem já veio do cache, pode já estar completa
+    const el = imgRef.current;
+    if (el && el.complete) {
+      // garante um frame para o navegador pintar
+      requestAnimationFrame(() => setPainted(true));
+    }
+  }, [item?.img]);
 
   if (!item) return null;
+
+  // src final que já veio de openItemModal (pré-carregado) ou será normalizado aqui
+  const src = normalizeImageUrl(item.img || "");
 
   return (
     <ModalPortal>
@@ -550,62 +548,69 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
         {/* backdrop bloqueia o fundo */}
         <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-        {/* enquanto carrega, mostra um loader */}
-        {!imgReady && (
-          <div className="absolute inset-0 flex items-center justify-center p-6">
-            <div className="rounded-2xl bg-white/90 px-6 py-4 text-sm text-neutral-700 shadow-xl">
-              Carregando…
+        {/* container do modal: só fica visível quando a imagem tiver pintado */}
+        <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6">
+          <div
+            className={`bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-opacity duration-150 ${
+              painted ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {/* área da imagem */}
+            <div className="relative">
+              <div className="w-full bg-white flex items-center justify-center">
+                <img
+                  ref={imgRef}
+                  src={src}
+                  alt={item.name}
+                  className="w-auto max-h-[60vh] object-contain"
+                  decoding="async"
+                  onLoad={() => {
+                    // garante que só mostramos o conteúdo quando a imagem tiver sido realmente pintada
+                    requestAnimationFrame(() => setPainted(true));
+                  }}
+                  onError={(e) => {
+                    const fb = driveThumb(item.img, 1600);
+                    if (e.currentTarget.src !== fb) {
+                      e.currentTarget.src = fb;
+                    } else {
+                      // último recurso: libera mesmo assim
+                      requestAnimationFrame(() => setPainted(true));
+                    }
+                  }}
+                />
+              </div>
+              <button
+                className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border"
+                onClick={onClose}
+              >
+                Fechar
+              </button>
             </div>
-          </div>
-        )}
 
-        {/* conteúdo: caixa menor, com rolagem interna caso exceda */}
-        {imgReady && (
-          <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
-            <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden
-                            flex flex-col max-h-[85vh]">
-              {/* área da imagem */}
-              <div className="relative">
-                <div className="w-full bg-white">
-                  <SmartImage src={item.img} alt={item.name} maxHeightVH={60} />
-                </div>
+            {/* detalhes (só aparecem quando painted = true junto com a imagem) */}
+            <div className="p-4 sm:p-6 space-y-2 overflow-auto">
+              <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
+              <div className="text-neutral-600">{item.desc}</div>
+              <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
 
+              <div className="flex items-center gap-2 pt-2">
                 <button
-                  className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border"
-                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl bg-black text-white font-semibold"
+                  onClick={() => onAdd(item)}
+                  disabled={!item.available}
                 >
-                  Fechar
+                  {item.available ? "Adicionar ao carrinho" : "Indisponível"}
                 </button>
-              </div>
 
-              {/* detalhes: rolagem interna se necessário */}
-              <div className="p-4 sm:p-6 space-y-2 overflow-auto">
-                <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
-                <div className="text-neutral-600">{item.desc}</div>
-                <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <button
-                    className="px-4 py-2 rounded-xl bg-black text-white font-semibold"
-                    onClick={() => onAdd(item)}
-                    disabled={!item.available}
-                  >
-                    {item.available ? "Adicionar ao carrinho" : "Indisponível"}
+                {isAdmin && (
+                  <button className="px-4 py-2 rounded-xl border" onClick={() => setEdit(true)}>
+                    Editar
                   </button>
-
-                  {isAdmin && (
-                    <button
-                      className="px-4 py-2 rounded-xl border"
-                      onClick={() => setEdit(true)}
-                    >
-                      Editar
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {edit && (
