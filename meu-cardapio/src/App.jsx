@@ -451,7 +451,7 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
       <button className="w-full" onClick={()=>onView(item)}>
         <SmartImage src={item.img} alt={item.name} />
       </button>
-
+        <SmartImage src={item.img} alt={item.name} />
       </button>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
