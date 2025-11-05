@@ -1,12 +1,6 @@
-// src/components/CardItem.jsx
-import React, { useState } from "react";
-import { currency } from "../helpers/utils";
-
 export default function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }) {
-  const [editing, setEditing] = useState(false);
-
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col">
       <button className="w-full" onClick={() => onView(item)}>
         <div className="relative w-full aspect-[4/3] bg-neutral-100 overflow-hidden">
           <img
@@ -21,36 +15,39 @@ export default function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onVie
         </div>
       </button>
 
-      <div className="p-4 flex-1 flex flex-col">
+      <div className="p-3 flex-1 flex flex-col">
         <div className="flex-1">
           <div className="flex items-start justify-between gap-3">
-            <h4 className="font-semibold leading-tight">{item.name}</h4>
-            <span className="text-sm font-semibold">{currency(item.price)}</span>
+            <h4 className="font-semibold leading-tight text-sm">{item.name}</h4>
+            <span className="text-xs font-semibold">
+              {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(item.price)}
+            </span>
           </div>
-          <p className="text-sm text-neutral-600 mt-1 line-clamp-3">
-            {item.desc}
-          </p>
+          <p className="text-xs text-neutral-600 mt-1 line-clamp-2">{item.desc}</p>
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-2">
           <button
-            className="flex-1 py-2 rounded-xl border font-medium disabled:opacity-50"
+            className="flex-1 py-2 rounded-lg border text-sm font-medium disabled:opacity-50"
             disabled={!item.available}
             onClick={() => onAdd(item)}
           >
-            {item.available ? "Adicionar" : "Indisponível"}
+            Adicionar
           </button>
 
           {isAdmin && (
             <>
-              <button className="px-3 py-2 rounded-xl border" onClick={() => setEditing(true)}>
-                Editar
+              <button
+                className="px-2 py-2 rounded-lg border text-sm"
+                onClick={() => onEdit(item)}
+                title="Editar"
+              >
+                ✎
               </button>
               <button
-                className="px-3 py-2 rounded-xl border"
+                className="px-2 py-2 rounded-lg border text-sm"
                 onClick={() => onDelete(item.id)}
                 title="Remover"
-                aria-label="Remover"
               >
                 🗑️
               </button>
@@ -58,12 +55,6 @@ export default function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onVie
           )}
         </div>
       </div>
-
-      {editing && (
-        // Reaproveita seu EditModal existente
-        // (deixe como já está no seu projeto)
-        null
-      )}
     </div>
   );
 }
