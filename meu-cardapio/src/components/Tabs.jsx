@@ -47,7 +47,7 @@ export default function Tabs({
           {isAdmin && (
             <button
               onClick={() => setShowNewCat(true)}
-              className="ml-auto w-10 h-10 rounded-full bg-orange-500 text-white font-bold shadow"
+              className="ml-auto w-10 h-10 rounded-full bg-orange-500 text-white shadow"
             >
               +
             </button>
@@ -57,3 +57,4 @@ export default function Tabs({
     </div>
   );
 }
+
