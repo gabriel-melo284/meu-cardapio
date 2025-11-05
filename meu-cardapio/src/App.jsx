@@ -118,8 +118,8 @@ export default function App() {
 
   /* --- PÁGINA PRINCIPAL (MENU) --- */
   return (
-    // reserva lateral p/ o carrinho fixo no desktop
     <div className="min-h-screen bg-neutral-50 pr-0 md:pr-[380px]">
+      {/* reserva lateral p/ o carrinho fixo no desktop */}
       <Header isAdmin={isAdmin} onOpenOrders={() => setPage("pedidos")} />
       <Banner />
 
