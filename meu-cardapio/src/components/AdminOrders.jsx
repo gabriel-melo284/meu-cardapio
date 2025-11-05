@@ -1,10 +1,30 @@
+// src/components/AdminOrders.jsx
+import React, { useEffect } from "react";
+import { api } from "../helpers/api";
 import { currency } from "../helpers/utils";
 
 export default function AdminOrders({ orders, setOrders, setPage }) {
+  // polling leve a cada 7s
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      const remote = await api.loadOrders(orders);
+      if (!alive) return;
+      // só atualiza se mudou de fato
+      const localStr = JSON.stringify(orders);
+      const remoteStr = JSON.stringify(remote);
+      if (localStr !== remoteStr) setOrders(remote);
+    };
+    tick();
+    const id = setInterval(tick, 7000);
+    return () => { alive = false; clearInterval(id); };
+  }, [orders, setOrders]);
+
   function confirmarPagamento(id) {
-    const next = orders.map(o => o.id === id ? { ...o, status: "pagamento confirmado" } : o);
-    setOrders(next);
-    alert("Pagamento confirmado!");
+    const atualizado = orders.map((p) =>
+      p.id === id ? { ...p, status: "pagamento confirmado" } : p
+    );
+    setOrders(atualizado); // salvará no Blob via useEffect do App
   }
 
   return (
@@ -13,20 +33,23 @@ export default function AdminOrders({ orders, setOrders, setPage }) {
         <h1 className="text-2xl font-extrabold mb-6">Pedidos realizados</h1>
 
         {orders.length === 0 ? (
-          <p className="text-neutral-600">Nenhum pedido ainda.</p>
+          <p className="text-neutral-600">Nenhum pedido foi feito ainda.</p>
         ) : (
           <div className="space-y-6">
-            {orders.slice().reverse().map((p) => (
+            {orders.map((p) => (
               <div key={p.id} className="border rounded-2xl p-5 shadow-sm bg-neutral-50">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex justify-between items-center">
                   <div>
                     <h2 className="font-bold text-lg">Pedido {p.id}</h2>
                     <p className="text-neutral-600 text-sm">{p.data}</p>
-                    <p className={`mt-1 text-sm font-semibold ${p.status === "pagamento confirmado" ? "text-green-600" : "text-red-600"}`}>
+                    <p
+                      className={`mt-1 text-sm font-semibold ${
+                        p.status === "pagamento confirmado" ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
                       Status: {p.status}
                     </p>
                   </div>
-
                   {p.status !== "pagamento confirmado" && (
                     <button
                       onClick={() => confirmarPagamento(p.id)}
@@ -38,10 +61,10 @@ export default function AdminOrders({ orders, setOrders, setPage }) {
                 </div>
 
                 <div className="mt-4 border-t pt-4 space-y-2">
-                  {p.items.map((it) => (
-                    <div key={it.id + it.qty} className="flex justify-between text-sm">
-                      <span>{it.qty}× {it.name}</span>
-                      <span>{currency(it.price * it.qty)}</span>
+                  {p.items.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span>{item.qty}× {item.name}</span>
+                      <span>{currency(item.price * item.qty)}</span>
                     </div>
                   ))}
                 </div>
@@ -54,7 +77,10 @@ export default function AdminOrders({ orders, setOrders, setPage }) {
           </div>
         )}
 
-        <button onClick={() => setPage("menu")} className="mt-6 w-full py-3 rounded-xl bg-black text-white font-semibold">
+        <button
+          onClick={() => setPage("menu")}
+          className="mt-6 w-full py-3 rounded-xl bg-black text-white font-semibold"
+        >
           Voltar ao cardápio
         </button>
       </div>
