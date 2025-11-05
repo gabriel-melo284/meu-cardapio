@@ -1,26 +1,25 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-/** =================== CONFIG =================== **/
-const ACCESS_KEY = "umami";   // público: ?access=umami
-const ADMIN_KEY  = "admin";   // admin:   ?access=umami&admin=admin
+/* =================== CONFIG =================== */
+const ACCESS_KEY = "umami";    // público: ?access=umami
+const ADMIN_KEY  = "admin";    // admin:   ?access=umami&admin=admin
 
-// localStorage isolado por chave
 const LS = {
-  cats: (ak) => `cats_v5_${ak}`,
-  menu: (ak) => `menu_v5_${ak}`,
+  cats: (ak) => `cats_v6_${ak}`,
+  menu: (ak) => `menu_v6_${ak}`,
 };
 
 const STORE = {
-  name: "Umami Fit - Gourmet",         // <-- nome atualizado
-  address: "Santa Mônica",             // <-- endereço
-  city: "Uberlândia",                  // <-- cidade
+  name: "Umami Fit - Gourmet",
+  address: "Santa Mônica",
+  city: "Uberlândia",
   opensAt: "08:00",
   closesAt: "18:00",
-  banner: "/banner.jpg",
-  logo: "/umami-logo.png",
+  banner: "/banner.jpg",       // /public/banner.jpg
+  logo: "/umami-logo.png",     // /public/umami-logo.png
 };
 
-/** =================== BASE =================== **/
+/* =================== BASE =================== */
 const DEFAULT_CATEGORIES = [
   { id: "marmitas",  label: "Marmitas" },
   { id: "bolos",     label: "Bolos de pote" },
@@ -40,9 +39,9 @@ const DEFAULT_MENU = [
   { id:"c1", category:"combos", name:"Combo da Semana", desc:"2 marmitas + 2 bolos de pote.", price:69.9, img:"https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1974&auto=format&fit=crop", available:true },
 ];
 
-/** =================== HELPERS =================== **/
+/* =================== HELPERS =================== */
 const currency = (n) => n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-const getParam  = (k) => { try { return new URL(window.location.href).searchParams.get(k);} catch { return null; } };
+const getParam  = (k) => { try{ return new URL(window.location.href).searchParams.get(k); } catch{ return null; } };
 const slugify   = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 
 function safeLoad(key, fallback){
@@ -50,7 +49,6 @@ function safeLoad(key, fallback){
     const raw = localStorage.getItem(key);
     if(!raw) return fallback;
     const val = JSON.parse(raw);
-    if(Array.isArray(fallback) && !Array.isArray(val)) return fallback;
     return val ?? fallback;
   }catch{ return fallback; }
 }
@@ -73,22 +71,22 @@ function businessStatus(opensAt, closesAt){
   return `Abre amanhã às ${opensAt}`;
 }
 
-/** =================== APP =================== **/
+/* =================== APP =================== */
 export default function App(){
   const hasAccess = getParam("access") === ACCESS_KEY;
   const isAdmin   = hasAccess && getParam("admin") === ADMIN_KEY;
 
   const [categories, setCategories] = useState(()=> safeLoad(LS.cats(ACCESS_KEY), DEFAULT_CATEGORIES));
   const [menu,        setMenu]      = useState(()=> safeLoad(LS.menu(ACCESS_KEY), DEFAULT_MENU));
-  const [tab,         setTab]       = useState(()=> "principal");
+  const [tab,         setTab]       = useState("principal");
   const [query,       setQuery]     = useState("");
   const [cart,        setCart]      = useState([]);
 
   const [showNewCat,  setShowNewCat]  = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemCat,  setNewItemCat]  = useState("");
-  const [viewItem,    setViewItem]    = useState(null);
 
+  const [viewItem, setViewItem] = useState(null);
   const [manualTabPriority, setManualTabPriority] = useState(false);
 
   const tabs = useMemo(() => [{ id:"principal", label:"Principal" }, ...categories], [categories]);
@@ -101,14 +99,18 @@ export default function App(){
       <div className="min-h-screen flex items-center justify-center bg-neutral-100">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
           <h1 className="text-2xl font-bold mb-2">Acesso restrito</h1>
-          <p className="text-neutral-600 mb-6">Este cardápio é privado. Solicite o <b>link de acesso</b> ao estabelecimento.</p>
-          <p className="text-sm text-neutral-500">Dica (dev): use <code>?access={ACCESS_KEY}</code> no URL. Admin usa link separado.</p>
+          <p className="text-neutral-600 mb-6">
+            Este cardápio é privado. Solicite o <b>link de acesso</b> ao estabelecimento.
+          </p>
+          <p className="text-sm text-neutral-500">
+            Dica (dev): use <code>?access={ACCESS_KEY}</code> no URL. Admin usa link separado.
+          </p>
         </div>
       </div>
     );
   }
 
-  // Busca auto-seleciona sessão (exceto após clique manual)
+  // Busca global auto-seleciona sessão (a menos que o usuário clique numa guia)
   useEffect(()=>{
     const q = query.trim().toLowerCase();
     if(!q){ setManualTabPriority(false); return; }
@@ -116,7 +118,9 @@ export default function App(){
     const firstMatch = menu.find(i=>{
       if(!i.available) return false;
       const catLabel = categories.find(c=>c.id===i.category)?.label?.toLowerCase() || "";
-      return (i.name||"").toLowerCase().includes(q) || (i.desc||"").toLowerCase().includes(q) || catLabel.includes(q);
+      return (i.name||"").toLowerCase().includes(q) ||
+             (i.desc||"").toLowerCase().includes(q) ||
+             catLabel.includes(q);
     });
     if(firstMatch && firstMatch.category !== tab) setTab(firstMatch.category);
   },[query, manualTabPriority, menu, categories, tab]);
@@ -127,16 +131,18 @@ export default function App(){
     if(q){
       return avail.filter(i=>{
         const catLabel = categories.find(c=>c.id===i.category)?.label?.toLowerCase() || "";
-        return (i.name||"").toLowerCase().includes(q) || (i.desc||"").toLowerCase().includes(q) || catLabel.includes(q);
+        return (i.name||"").toLowerCase().includes(q) ||
+               (i.desc||"").toLowerCase().includes(q) ||
+               catLabel.includes(q);
       });
     }
     if(tab === "principal") return avail;
     return avail.filter(i=>i.category===tab);
   },[menu, categories, tab, query]);
 
-  const subtotal  = cart.reduce((s,it)=> s + it.price*it.qty, 0);
-  const upsertItem= (item)=> setMenu(prev=> prev.some(p=>p.id===item.id)? prev.map(p=>p.id===item.id?item:p) : [...prev, item]);
-  const removeItem= (id)=> setMenu(prev=> prev.filter(p=>p.id!==id));
+  const subtotal = cart.reduce((s,it)=> s + it.price*it.qty, 0);
+  const upsertItem = (item)=> setMenu(prev=> prev.some(p=>p.id===item.id)? prev.map(p=>p.id===item.id?item:p) : [...prev, item]);
+  const removeItem = (id)=> setMenu(prev=> prev.filter(p=>p.id!==id));
   const statusText = businessStatus(STORE.opensAt, STORE.closesAt);
 
   return (
@@ -167,11 +173,10 @@ export default function App(){
         </div>
       </div>
 
-      {/* Top bar */}
+      {/* Top bar (lupa à esquerda) */}
       <div className="sticky top-0 z-30 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="relative">
-            {/* lupa à ESQUERDA (opacidade baixa quando vazio) */}
             {!query.trim() && (
               <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-30">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -218,12 +223,12 @@ export default function App(){
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <div className="mb-5">
-            {/* mais espaço do título Principal para a primeira subseção */}
             <h2 className="text-2xl sm:text-3xl font-extrabold">
               {tabs.find(c=>c.id===tab)?.label || "Sessão"}
             </h2>
           </div>
 
+          {/* botão + na sessão específica */}
           {!query.trim() && isAdmin && tab!=="principal" && (
             <button
               className="mb-4 w-11 h-11 flex items-center justify-center rounded-full bg-orange-500 text-white shadow hover:bg-orange-600"
@@ -232,8 +237,9 @@ export default function App(){
             >+</button>
           )}
 
+          {/* Principal com subseções */}
           {tab === "principal" && !query.trim() ? (
-            <div className="space-y-10">{/* <-- espaçamento maior entre subseções */}
+            <div className="space-y-10">
               {categories.map(cat=>{
                 const items = menu.filter(i=>i.available && i.category===cat.id);
                 const showSection = isAdmin ? true : items.length>0;
@@ -374,7 +380,7 @@ export default function App(){
   );
 }
 
-/** =================== Subcomponentes =================== **/
+/* =================== SUBCOMPONENTES =================== */
 function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   const [editing, setEditing] = useState(false);
   return (
@@ -413,13 +419,13 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   );
 }
 
-/** ===== Modal de visualização (detalhes do item) — z-index alto ===== **/
+/* ===== Modal de visualização — z-index ultralto ===== */
 function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
   const [edit, setEdit] = useState(false);
   if(!item) return null;
   return (
-    <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-3 sm:p-6">
-      <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden">
+    <div className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-3 sm:p-6">
+      <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden z-[9999]">
         <div className="relative">
           <img src={item.img} alt={item.name} className="w-full h-64 sm:h-80 md:h-96 object-cover"/>
           <button className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border" onClick={onClose}>Fechar</button>
@@ -450,13 +456,13 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
   );
 }
 
-/** ===== Modal de edição — z-index alto ===== **/
+/* ===== Modal de edição — z-index ultralto ===== */
 function EditModal({ item, onClose, onSave }){
   const [form,setForm] = useState(item);
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40 z-[105]" onClick={onClose}/>
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3 z-[110]">
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={onClose}/>
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3 z-[9999]">
         <h3 className="text-lg font-semibold">Editar item</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm"><span className="text-neutral-500">Nome</span>
@@ -488,16 +494,16 @@ function EditModal({ item, onClose, onSave }){
   );
 }
 
-/** ===== Modais de criação — z-index muito alto ===== **/
+/* ===== Modais de criação — z-index ultralto ===== */
 function NewCategoryModal({ categories, setCategories, onClose, setTab }){
   const [label, setLabel] = useState("");
   const [id, setId] = useState("");
   useEffect(()=> setId(slugify(label)), [label]);
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40 z-[105]" onClick={onClose}/>
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3 z-[110]">
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={onClose}/>
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-3 z-[9999]">
         <h3 className="text-lg font-semibold">Criar nova sessão</h3>
         <label className="text-sm"><span className="text-neutral-500">Nome da sessão</span>
           <input className="w-full border rounded-xl px-3 py-2" value={label} onChange={e=>setLabel(e.target.value)} placeholder="Ex.: Sobremesas"/>
@@ -528,9 +534,9 @@ function NewItemModal({ currentCategory, categories, onClose, onSave }){
     name: "", desc: "", price: 0, img: "", available: true,
   });
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40 z-[105]" onClick={onClose}/>
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3 z-[110]">
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={onClose}/>
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-3 z-[9999]">
         <h3 className="text-lg font-semibold">Novo item ({categories.find(c=>c.id===currentCategory)?.label})</h3>
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm"><span className="text-neutral-500">Nome</span>
