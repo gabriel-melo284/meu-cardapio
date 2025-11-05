@@ -21,8 +21,7 @@ import NewCategoryModal from "./components/NewCategoryModal";
 /* HELPERS */
 import { load, save } from "./helpers/storage";
 import { getParam } from "./helpers/utils";
-import { fetchRemoteData, saveRemoteData } from "./helpers/api";
-
+import { api } from "./helpers/api";
 /* CONFIG */
 import { STORE, DEFAULT_CATEGORIES, DEFAULT_MENU, LS } from "./helpers/config";
 
@@ -237,3 +236,4 @@ export default function App() {
     </div>
   );
 }
+
