@@ -122,6 +122,31 @@ function preloadImage(src) {
     img.src = src;
   });
 }
+const GRADIENT_FALLBACK =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1584 396'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%23cdb86d'/><stop offset='1' stop-color='%23c88b34'/></linearGradient></defs><rect width='1584' height='396' fill='url(%23g)'/></svg>";
+
+
+function preload(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(src);
+    img.onerror = reject;
+    img.src = src + (src.includes("?") ? "" : "?v=1"); // cache-busting simples
+  });
+}
+
+async function resolveBanner() {
+  const candidates = [
+    publicAsset("banner_1584x396.webp"),
+    publicAsset("banner_1584x396.jpg"),
+    publicAsset("banner.png"),
+    publicAsset("banner.jpg"),
+  ];
+  for (const url of candidates) {
+    try { await preload(url); return url; } catch {}
+  }
+  return GRADIENT_FALLBACK;
+}
 
 /* =================== APP =================== */
 export default function App(){
@@ -142,6 +167,12 @@ export default function App(){
   const [manualTabPriority, setManualTabPriority] = useState(false);
 
   const tabs = useMemo(() => [{ id:"principal", label:"Principal" }, ...categories], [categories]);
+
+  const [bannerSrc, setBannerSrc] = useState(GRADIENT_FALLBACK);
+
+  useEffect(() => {
+    resolveBanner().then(setBannerSrc);
+  }, []);
 
   useEffect(()=> safeSave(LS.cats(ACCESS_KEY), categories), [categories]);
   useEffect(()=> safeSave(LS.menu(ACCESS_KEY), menu), [menu]);
@@ -218,23 +249,18 @@ export default function App(){
   const statusText = businessStatus(STORE.opensAt, STORE.closesAt);
 
   return (
+    {/* Banner (30% menor) */}
     <div className="min-h-screen bg-neutral-50">
       {/* Banner (30% menor) */}
       <div className="relative z-0 h-52 sm:h-56 md:h-64 overflow-hidden">
-      <img
-        src={`${STORE.banner}?v=1`} // cache-busting simples
-        alt="banner"
-        className="w-full h-full object-cover"
-        onError={(e) => {
-          // Fallback leve (gradiente)
-          e.currentTarget.onerror = null;
-          e.currentTarget.src =
-            "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1584 396'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%23ffe08a'/><stop offset='1' stop-color='%23ffb347'/></linearGradient></defs><rect width='1584' height='396' fill='url(%23g)'/></svg>";
-        }}
-      />
-      <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-    </div>
-      
+        <img
+          src={bannerSrc}
+          alt="banner"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+      </div>
+    
       {/* Header da loja (fora do banner) */}
       <div className="bg-white relative z-10">
         <div className="max-w-7xl mx-auto w-full px-4">
