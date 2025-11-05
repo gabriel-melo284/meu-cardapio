@@ -1,4 +1,4 @@
-export default function Cart({ cart, updateQty, subtotal, setPage, isAdmin }) {
+export default function Cart({ cart, updateQty, subtotal, isAdmin, onCheckout, onGoAdmin }) {
   return (
     <aside
       className="
@@ -20,22 +20,12 @@ export default function Cart({ cart, updateQty, subtotal, setPage, isAdmin }) {
               <div>
                 <div className="font-medium text-sm">{it.name}</div>
                 <div className="text-xs text-neutral-500">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(it.price)} × {it.qty}
+                  {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(it.price)} × {it.qty}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  className="px-2 py-1 border rounded-full"
-                  onClick={() => updateQty(it.id, -1)}
-                >
-                  −
-                </button>
-                <button
-                  className="px-2 py-1 border rounded-full"
-                  onClick={() => updateQty(it.id, +1)}
-                >
-                  +
-                </button>
+                <button className="px-2 py-1 border rounded-full" onClick={() => updateQty(it.id, -1)}>−</button>
+                <button className="px-2 py-1 border rounded-full" onClick={() => updateQty(it.id, +1)}>+</button>
               </div>
             </div>
           ))
@@ -44,21 +34,20 @@ export default function Cart({ cart, updateQty, subtotal, setPage, isAdmin }) {
 
       <div className="border-t pt-3 flex items-center justify-between font-semibold">
         <span>Subtotal</span>
-        <span>
-          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(subtotal)}
-        </span>
+        <span>{new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(subtotal)}</span>
       </div>
 
       <button
-        onClick={() => setPage("pix")}
+        onClick={onCheckout}
         className="mt-3 w-full py-3 rounded-xl bg-black text-white font-semibold"
+        disabled={cart.length === 0}
       >
         Finalizar pedido
       </button>
 
       {isAdmin && (
         <button
-          onClick={() => setPage("pedidos")}
+          onClick={onGoAdmin}
           className="mt-2 w-full py-3 rounded-xl bg-orange-500 text-white font-semibold"
         >
           Pedidos (admin)
