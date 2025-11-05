@@ -153,6 +153,8 @@ export default function App(){
   const hasAccess = getParam("access") === ACCESS_KEY;
   const isAdmin   = hasAccess && getParam("admin") === ADMIN_KEY;
 
+  const WHATSAPP_NUMBER = "5534998974071"; // <- coloque o seu número aqui
+
   const [categories, setCategories] = useState(()=> safeLoad(LS.cats(ACCESS_KEY), DEFAULT_CATEGORIES));
   const [menu,        setMenu]      = useState(()=> safeLoad(LS.menu(ACCESS_KEY), DEFAULT_MENU));
   const [tab,         setTab]       = useState("principal");
@@ -285,7 +287,27 @@ export default function App(){
         </div>
       </div>
 
+      {/* Botão flutuante do WhatsApp */}
+      <a
+        href={`https://wa.me/${WHATSAPP_NUMBER}?text=Olá!%20Gostaria%20de%20fazer%20um%20pedido.`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-[9999]"
+      >
+        <div className="bg-green-500 hover:bg-green-600 text-white w-16 h-16 rounded-full shadow-xl flex items-center justify-center transition-all">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 32 32"
+            width="34"
+            height="34"
+            fill="white"
+          >
+            <path d="M16.003 3.2c-7.03 0-12.8 5.657-12.8 12.64 0 2.227.586 4.405 1.706 6.336L3.2 28.8l6.803-1.773a12.86 12.86 0 0 0 5.997 1.515h.003c7.03 0 12.8-5.657 12.8-12.64s-5.77-12.702-12.8-12.702zm0 23.04h-.002a10.93 10.93 0 0 1-5.568-1.53l-.398-.236-4.04 1.054 1.078-3.915-.26-.402a10.65 10.65 0 0 1-1.69-5.77c0-5.92 4.86-10.74 10.88-10.74 5.825 0 10.88 4.915 10.88 10.74 0 5.925-5.055 10.8-10.88 10.8zm5.963-7.987c-.326-.163-1.93-.95-2.23-1.06-.3-.112-.52-.163-.74.162-.22.325-.846 1.06-1.04 1.282-.193.223-.387.244-.713.081-.326-.162-1.38-.5-2.63-1.595-.971-.84-1.63-1.875-1.82-2.2-.193-.325-.02-.5.143-.662.147-.146.326-.387.49-.581.162-.194.216-.325.326-.544.11-.218.055-.406-.027-.569-.081-.162-.74-1.784-1.01-2.447-.266-.637-.537-.55-.74-.562-.193-.012-.414-.015-.635-.015-.22 0-.577.081-.877.406-.3.325-1.15 1.12-1.15 2.73 0 1.61 1.18 3.166 1.347 3.385.162.224 2.32 3.557 5.617 4.987.785.337 1.397.538 1.875.688.787.25 1.5.215 2.062.13.63-.094 1.93-.788 2.205-1.55.275-.762.275-1.415.193-1.55-.081-.136-.3-.218-.626-.38z"/>
+          </svg>
+        </div>
+      </a>
 
+      
       {/* Top bar (lupa à esquerda) */}
       <div className="sticky top-0 z-30 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-3">
