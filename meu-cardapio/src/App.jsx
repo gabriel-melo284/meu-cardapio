@@ -452,9 +452,8 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border flex flex-col">
       <button className="w-full" onClick={() => onView(item)}>
-        <SmartImage src={item.img} alt={item.name} />
+        <CardThumb src={item.img} alt={item.name} />
       </button>
-
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -542,38 +541,35 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[9999]">
-        {/* backdrop bloqueia o fundo */}
-        <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-        {/* container do modal: só fica visível quando a imagem tiver pintado */}
+      <div
+        className="fixed inset-0 z-[9999]"
+        onClick={onClose} // qualquer clique fora fecha
+      >
+        {/* backdrop */}
+        <div className="absolute inset-0 bg-black/50" />
+  
+        {/* container do modal: para não fechar ao clicar dentro */}
         <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6">
           <div
             className={`bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-opacity duration-150 ${
               painted ? "opacity-100" : "opacity-0"
             }`}
+            onClick={(e) => e.stopPropagation()} // impede bolha; clique aqui NÃO fecha
           >
             {/* área da imagem */}
             <div className="relative">
-              <div className="w-full bg-white flex items-center justify-center">
+              <div className="w-full bg-white">
                 <img
                   ref={imgRef}
                   src={src}
                   alt={item.name}
                   className="w-auto max-h-[60vh] object-contain"
                   decoding="async"
-                  onLoad={() => {
-                    // garante que só mostramos o conteúdo quando a imagem tiver sido realmente pintada
-                    requestAnimationFrame(() => setPainted(true));
-                  }}
+                  onLoad={() => requestAnimationFrame(() => setPainted(true))}
                   onError={(e) => {
                     const fb = driveThumb(item.img, 1600);
-                    if (e.currentTarget.src !== fb) {
-                      e.currentTarget.src = fb;
-                    } else {
-                      // último recurso: libera mesmo assim
-                      requestAnimationFrame(() => setPainted(true));
-                    }
+                    if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
+                    else requestAnimationFrame(() => setPainted(true));
                   }}
                 />
               </div>
@@ -584,13 +580,12 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
                 Fechar
               </button>
             </div>
-
-            {/* detalhes (só aparecem quando painted = true junto com a imagem) */}
+  
+            {/* detalhes */}
             <div className="p-4 sm:p-6 space-y-2 overflow-auto">
               <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
               <div className="text-neutral-600">{item.desc}</div>
               <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
-
               <div className="flex items-center gap-2 pt-2">
                 <button
                   className="px-4 py-2 rounded-xl bg-black text-white font-semibold"
@@ -599,7 +594,6 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
                 >
                   {item.available ? "Adicionar ao carrinho" : "Indisponível"}
                 </button>
-
                 {isAdmin && (
                   <button className="px-4 py-2 rounded-xl border" onClick={() => setEdit(true)}>
                     Editar
@@ -610,7 +604,7 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
           </div>
         </div>
       </div>
-
+  
       {edit && (
         <EditModal
           item={item}
@@ -623,8 +617,26 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
       )}
     </ModalPortal>
   );
+
 }
 
+function CardThumb({ src, alt = "" }) {
+  const finalSrc = normalizeImageUrl(src);
+  const fallback = driveThumb(src, 800);
+  return (
+    <div className="relative w-full aspect-[4/3] bg-neutral-100 overflow-hidden">
+      <img
+        src={finalSrc}
+        alt={alt}
+        className="absolute inset-0 w-full h-full object-cover"
+        onError={(e) => {
+          if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+        }}
+        decoding="async"
+      />
+    </div>
+  );
+}
 
 
 /* ===== Modal de edição — via Portal ===== */
