@@ -537,7 +537,7 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
   if (!item) return null;
 
   // src final que já veio de openItemModal (pré-carregado) ou será normalizado aqui
-  const src = normalizeImageUrl(item.img || "");
+  const src = item.img || "";
 
   return (
     <ModalPortal>
@@ -724,19 +724,15 @@ function SmartImage({
   className = "",
   maxHeightVH = 0, // ex.: 60 limita a 60vh no modal; 0 = sem limite
 }) {
-  const [ratio, setRatio] = React.useState(null); // w/h
-  const [imgSrc, setImgSrc] = React.useState(normalizeImageUrl(src));
+  const [imgSrc, setImgSrc] = useState(normalizeImageUrl(src));
 
-  React.useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
     const primary = normalizeImageUrl(src);
+
     const probe = new Image();
     probe.onload = () => {
       if (cancelled) return;
-      const r = probe.naturalWidth && probe.naturalHeight
-        ? probe.naturalWidth / probe.naturalHeight
-        : null;
-      setRatio(r);
       setImgSrc(primary);
     };
     probe.onerror = () => {
@@ -745,49 +741,42 @@ function SmartImage({
       const probe2 = new Image();
       probe2.onload = () => {
         if (cancelled) return;
-        const r = probe2.naturalWidth && probe2.naturalHeight
-          ? probe2.naturalWidth / probe2.naturalHeight
-          : null;
-        setRatio(r);
         setImgSrc(fb);
       };
       probe2.onerror = () => {
         if (cancelled) return;
-        setRatio(null);
         setImgSrc(primary); // último recurso
       };
       probe2.src = fb;
     };
     probe.src = primary;
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [src]);
 
-  // Sem ratio ainda? Evita "flash": reserva área mínima
-  const wrapperStyle = {
-    aspectRatio: ratio ? `${ratio}` : undefined,
-    maxHeight: maxHeightVH ? `${maxHeightVH}vh` : undefined,
-  };
+  const wrapperStyle = maxHeightVH ? { maxHeight: `${maxHeightVH}vh` } : undefined;
 
   return (
-    {/* área da imagem — centralizada perfeitamente */}
-    <div className="relative w-full bg-white flex justify-center items-center"
-         style={{ maxHeight: "60vh" }}>
-      
+    <div
+      className={`relative w-full bg-white flex justify-center items-center ${className}`}
+      style={wrapperStyle}
+    >
       <img
         src={imgSrc}
-        alt={item.name}
-        className="object-contain max-h-[60vh] w-auto mx-auto"
+        alt={alt}
+        className="object-contain w-auto max-h-full mx-auto"
         decoding="async"
-        onLoad={() => requestAnimationFrame(() => setPainted(true))}
         onError={(e) => {
-          const fb = driveThumb(item.img, 1600);
+          const fb = driveThumb(src, 1600);
           if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
-          else requestAnimationFrame(() => setPainted(true));
         }}
       />
     </div>
   );
 }
+
 
 function NewItemModal({ currentCategory, categories = [], onClose, onSave }) {
   const safeCategory =
