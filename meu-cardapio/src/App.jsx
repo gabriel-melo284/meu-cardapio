@@ -22,7 +22,7 @@ const STORE = {
   city: "Uberlândia",
   opensAt: "08:00",
   closesAt: "18:00",
-  banner: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACAAAAAR6CAYAAADfvpfjAAAQAElEQVR4Adz9B4B...PPmNLOTw43n1P9X585drRZhZL/3+f+9d/bW7T4dq6uqq6qrZ2bd6OQ9Ojp+v05M",
+  banner: "/banner.png",
   logo: "/umami-logo.png",     // /public/umami-logo.png
 };
 
