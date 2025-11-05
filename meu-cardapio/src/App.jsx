@@ -78,6 +78,37 @@ function businessStatus(opensAt, closesAt){
   return `Abre amanhã às ${opensAt}`;
 }
 
+/* ===== Imagens / Google Drive ===== */
+function extractDriveId(url) {
+  try {
+    if (!url) return null;
+    const m = url.match(/\/d\/([A-Za-z0-9_-]{10,})/);
+    if (m) return m[1];
+    const u = new URL(url);
+    return u.searchParams.get("id");
+  } catch {
+    return null;
+  }
+}
+function driveThumb(url, size = 1600) {
+  const id = extractDriveId(url);
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : url;
+}
+function normalizeImageUrl(url) {
+  const id = extractDriveId(url);
+  if (!id) return url;
+  return `https://drive.google.com/uc?export=view&id=${id}`;
+}
+// Pré-carrega uma imagem
+function preloadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(src);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 /* =================== APP =================== */
 export default function App(){
   const hasAccess = getParam("access") === ACCESS_KEY;
@@ -97,26 +128,6 @@ export default function App(){
   const [manualTabPriority, setManualTabPriority] = useState(false);
 
   const tabs = useMemo(() => [{ id:"principal", label:"Principal" }, ...categories], [categories]);
-  // Abre o modal somente quando a imagem estiver carregada
-  const openItemModal = async (item) => {
-    // URL “normalizada” (aceita Drive, etc.)
-    const primary = normalizeImageUrl(item.img);
-  
-    try {
-      await preloadImage(primary);
-      setViewItem({ ...item, img: primary });
-    } catch {
-      // fallback (Drive thumbnail), também pré-carregado
-      const fallback = driveThumb(item.img, 1600);
-      try {
-        await preloadImage(fallback);
-        setViewItem({ ...item, img: fallback });
-      } catch {
-        // em último caso, abre sem imagem (praticamente não ocorre)
-        setViewItem(item);
-      }
-    }
-  };
 
   useEffect(()=> safeSave(LS.cats(ACCESS_KEY), categories), [categories]);
   useEffect(()=> safeSave(LS.menu(ACCESS_KEY), menu), [menu]);
@@ -136,6 +147,23 @@ export default function App(){
       </div>
     );
   }
+
+  // Abre o modal somente quando a imagem estiver carregada
+  const openItemModal = async (item) => {
+    const primary = normalizeImageUrl(item.img);
+    try {
+      await preloadImage(primary);
+      setViewItem({ ...item, img: primary });
+    } catch {
+      const fallback = driveThumb(item.img, 1600);
+      try {
+        await preloadImage(fallback);
+        setViewItem({ ...item, img: fallback });
+      } catch {
+        setViewItem(item);
+      }
+    }
+  };
 
   // Busca global auto-seleciona sessão (a menos que o usuário clique numa guia)
   useEffect(()=>{
@@ -302,13 +330,19 @@ export default function App(){
                         <CardItem
                           key={item.id}
                           item={item}
-                          onAdd={...}
+                          onAdd={(it)=>
+                            setCart(prev=>{
+                              const f = prev.find(p=>p.id===it.id);
+                              return f
+                                ? prev.map(p=> p.id===it.id ? {...p, qty:p.qty+1} : p)
+                                : [...prev, {...it, qty:1}];
+                            })
+                          }
                           isAdmin={isAdmin}
                           onEdit={upsertItem}
                           onDelete={removeItem}
-                          onView={openItemModal}   // <— aqui
+                          onView={openItemModal}
                         />
-
                       ))}
                     </div>
                   </div>
@@ -321,13 +355,19 @@ export default function App(){
                 <CardItem
                   key={item.id}
                   item={item}
-                  onAdd={...}
+                  onAdd={(it)=>
+                    setCart(prev=>{
+                      const f = prev.find(p=>p.id===it.id);
+                      return f
+                        ? prev.map(p=> p.id===it.id ? {...p, qty:p.qty+1} : p)
+                        : [...prev, {...it, qty:1}];
+                    })
+                  }
                   isAdmin={isAdmin}
                   onEdit={upsertItem}
                   onDelete={removeItem}
-                  onView={openItemModal}   // <— aqui
+                  onView={openItemModal}
                 />
-
               ))}
             </div>
           )}
@@ -403,52 +443,6 @@ export default function App(){
   );
 }
 
-// Precarrega uma imagem e resolve quando estiver pronta
-function preloadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(src);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
-/* ===== Utils: Drive link -> URL direta ===== */
-// --- Google Drive helpers ---
-function extractDriveId(url) {
-  try {
-    if (!url) return null;
-    // /file/d/ID/view...
-    const m = url.match(/\/d\/([A-Za-z0-9_-]{10,})/);
-    if (m) return m[1];
-    // ...?id=ID
-    const u = new URL(url);
-    return u.searchParams.get("id");
-  } catch {
-    return null;
-  }
-}
-
-// URL direta (preferida para <img>)
-function driveDirect(url) {
-  const id = extractDriveId(url);
-  return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
-}
-
-// Fallback (quando a direta sofre bloqueio de hotlink/quotas)
-function driveThumb(url, size = 1600) {
-  const id = extractDriveId(url);
-  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : url;
-}
-
-// Normalizador: recebe qualquer link do Drive e devolve um <img src> válido
-function normalizeImageUrl(url, size = 1600) {
-  const id = extractDriveId(url);
-  if (!id) return url;
-  return `https://drive.google.com/uc?export=view&id=${id}`;
-}
-
-
 /* =================== SUBCOMPONENTES =================== */
 function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   const [editing, setEditing] = useState(false);
@@ -460,12 +454,10 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
           alt={item.name}
           className="w-full h-full object-cover"
           onError={(e) => {
-            // se a direta falhar, tenta thumbnail
             const id = extractDriveId(item.img);
             if (id) e.currentTarget.src = driveThumb(item.img, 1600);
           }}
         />
-
       </button>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
@@ -519,7 +511,7 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
                     if (id) e.currentTarget.src = driveThumb(item.img, 1600);
                   }}
                 />
-            </div>
+              </div>
               <button className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border" onClick={onClose}>Fechar</button>
             </div>
             <div className="p-4 sm:p-6 space-y-2">
@@ -571,7 +563,7 @@ function EditModal({ item, onClose, onSave }){
                 <textarea className="w-full border rounded-xl px-3 py-2" value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})}/>
               </label>
               <label className="text-sm col-span-2"><span className="text-neutral-500">URL da imagem</span>
-                <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={e=>setForm({...form,img:e.target.value})}/>
+                <input className="w-full border rounded-xl px-3 py-2" value={form.img} onChange={e=>setForm({...form,img: normalizeImageUrl(e.target.value)})}/>
               </label>
               <label className="text-sm"><span className="text-neutral-500">Categoria</span>
                 <input className="w-full border rounded-xl px-3 py-2" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}/>
@@ -583,7 +575,7 @@ function EditModal({ item, onClose, onSave }){
             </div>
             <div className="pt-2 flex items-center justify-end gap-2">
               <button className="px-4 py-2 rounded-xl border" onClick={onClose}>Cancelar</button>
-              <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>onSave(form)}>Salvar</button>
+              <button className="px-4 py-2 rounded-xl bg-black text-white" onClick={()=>onSave({...form, img: normalizeImageUrl(form.img)})}>Salvar</button>
             </div>
           </div>
         </div>
@@ -663,10 +655,10 @@ function NewItemModal({ currentCategory, categories = [], onClose, onSave }) {
                 <span className="text-neutral-500">Nome</span>
                 <input
                   className="w-full border rounded-xl px-3 py-2"
-                  value={form.img}
-                  onChange={(e)=>setForm({...form, img: normalizeImageUrl(e.target.value)})}
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Ex.: Marmita Fit (350g)"
                 />
-
               </label>
 
               <label className="text-sm">
@@ -709,8 +701,6 @@ function NewItemModal({ currentCategory, categories = [], onClose, onSave }) {
                   }
                   placeholder="Cole o link (Drive/externo)."
                 />
-
-
               </label>
 
               <label className="text-sm">
