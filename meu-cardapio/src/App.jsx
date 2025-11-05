@@ -6,14 +6,14 @@ const ADMIN_KEY  = "admin";   // admin:   ?access=umami&admin=admin
 
 // localStorage isolado por chave
 const LS = {
-  cats: (ak) => `cats_v4_${ak}`,
-  menu: (ak) => `menu_v4_${ak}`,
+  cats: (ak) => `cats_v5_${ak}`,
+  menu: (ak) => `menu_v5_${ak}`,
 };
 
 const STORE = {
-  name: "Umami Fit • Gourmet",
-  address: "Av. Exemplo, 1234",
-  city: "Sua Cidade",
+  name: "Umami Fit - Gourmet",         // <-- nome atualizado
+  address: "Santa Mônica",             // <-- endereço
+  city: "Uberlândia",                  // <-- cidade
   opensAt: "08:00",
   closesAt: "18:00",
   banner: "/banner.jpg",
@@ -68,9 +68,9 @@ function businessStatus(opensAt, closesAt){
   const now = new Date();
   const open = parseHM(opensAt);
   const close = parseHM(closesAt);
-  if (now < open) return `abre às ${opensAt}`;
-  if (now >= open && now <= close) return `fecha às ${closesAt}`;
-  return `abre amanhã às ${opensAt}`;
+  if (now < open) return `Abre às ${opensAt}`;
+  if (now >= open && now <= close) return `Fecha às ${closesAt}`;
+  return `Abre amanhã às ${opensAt}`;
 }
 
 /** =================== APP =================== **/
@@ -87,8 +87,8 @@ export default function App(){
   const [showNewCat,  setShowNewCat]  = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemCat,  setNewItemCat]  = useState("");
+  const [viewItem,    setViewItem]    = useState(null);
 
-  const [viewItem, setViewItem] = useState(null);
   const [manualTabPriority, setManualTabPriority] = useState(false);
 
   const tabs = useMemo(() => [{ id:"principal", label:"Principal" }, ...categories], [categories]);
@@ -108,6 +108,7 @@ export default function App(){
     );
   }
 
+  // Busca auto-seleciona sessão (exceto após clique manual)
   useEffect(()=>{
     const q = query.trim().toLowerCase();
     if(!q){ setManualTabPriority(false); return; }
@@ -170,27 +171,26 @@ export default function App(){
       <div className="sticky top-0 z-30 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="relative">
-            <input
-              placeholder="Buscar no cardápio"
-              className="w-full rounded-full border px-4 py-3 text-base focus:outline-none pr-12"
-              value={query}
-              onChange={(e)=> setQuery(e.target.value)}
-            />
-            {/* lupa com baixa transparência, só quando vazio */}
+            {/* lupa à ESQUERDA (opacidade baixa quando vazio) */}
             {!query.trim() && (
-              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 opacity-30">
-                {/* ícone SVG simples */}
+              <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-30">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                   <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
                   <path d="M20 20L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </div>
             )}
+            <input
+              placeholder="Buscar no cardápio"
+              className="w-full rounded-full border pl-12 pr-4 py-3 text-base focus:outline-none"
+              value={query}
+              onChange={(e)=> setQuery(e.target.value)}
+            />
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 pb-3 overflow-x-auto">
           <div className="flex items-center gap-3">
-            {[{id:"principal",label:"Principal"}, ...categories].map(c=>(
+            {tabs.map(c=>(
               <button
                 key={c.id}
                 onClick={()=>{
@@ -217,9 +217,10 @@ export default function App(){
       {/* Conteúdo */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="mb-3">
+          <div className="mb-5">
+            {/* mais espaço do título Principal para a primeira subseção */}
             <h2 className="text-2xl sm:text-3xl font-extrabold">
-              {([{id:"principal",label:"Principal"}, ...categories].find(c=>c.id===tab)?.label) || "Sessão"}
+              {tabs.find(c=>c.id===tab)?.label || "Sessão"}
             </h2>
           </div>
 
@@ -232,7 +233,7 @@ export default function App(){
           )}
 
           {tab === "principal" && !query.trim() ? (
-            <div className="space-y-8">
+            <div className="space-y-10">{/* <-- espaçamento maior entre subseções */}
               {categories.map(cat=>{
                 const items = menu.filter(i=>i.available && i.category===cat.id);
                 const showSection = isAdmin ? true : items.length>0;
@@ -487,7 +488,7 @@ function EditModal({ item, onClose, onSave }){
   );
 }
 
-/** ===== Modais de criação — z-index mais alto para sempre ficar por cima ===== **/
+/** ===== Modais de criação — z-index muito alto ===== **/
 function NewCategoryModal({ categories, setCategories, onClose, setTab }){
   const [label, setLabel] = useState("");
   const [id, setId] = useState("");
