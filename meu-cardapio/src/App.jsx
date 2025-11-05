@@ -491,56 +491,117 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
 }
 
 /* ===== Modal de visualização — via Portal ===== */
-function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
+function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }) {
   const [edit, setEdit] = useState(false);
-  if(!item) return null;
+  const [imgSrc, setImgSrc] = useState(normalizeImageUrl(item?.img || ""));
+  const [imgReady, setImgReady] = useState(false);
+
+  useEffect(() => {
+    setImgReady(false);
+    const src = normalizeImageUrl(item?.img || "");
+    setImgSrc(src);
+
+    // Garante onload dentro do modal antes de mostrar o conteúdo
+    const probe = new Image();
+    probe.onload = () => setImgReady(true);
+    probe.onerror = () => {
+      const fb = driveThumb(item?.img || "", 1600);
+      setImgSrc(fb);
+      // tenta de novo com o fallback
+      const probe2 = new Image();
+      probe2.onload = () => setImgReady(true);
+      probe2.onerror = () => setImgReady(true); // último recurso: mostra sem a imagem válida
+      probe2.src = fb;
+    };
+    probe.src = src;
+
+    return () => {
+      setImgReady(false);
+    };
+  }, [item]);
+
+  if (!item) return null;
+
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[9999]">
+        {/* Backdrop já aparece, bloqueando o fundo */}
         <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-        <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
-          <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
-            <div className="relative">
-              <div className="w-full bg-black flex items-center justify-center">
-                <img
-                  src={normalizeImageUrl(item.img)}
-                  alt={item.name}
-                  className="max-h-[80vh] w-auto object-contain"
-                  onError={(e) => {
-                    const id = extractDriveId(item.img);
-                    if (id) e.currentTarget.src = driveThumb(item.img, 1600);
-                  }}
-                />
-              </div>
-              <button className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border" onClick={onClose}>Fechar</button>
+
+        {/* Enquanto a imagem não estiver pronta, mostramos só um loader centralizado */}
+        {!imgReady && (
+          <div className="absolute inset-0 flex items-center justify-center p-6">
+            <div className="rounded-2xl bg-white/90 px-6 py-4 text-sm text-neutral-700 shadow-xl">
+              Carregando…
             </div>
-            <div className="p-4 sm:p-6 space-y-2">
-              <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
-              <div className="text-neutral-600">{item.desc}</div>
-              <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
-              <div className="flex items-center gap-2 pt-2">
-                <button className="px-4 py-2 rounded-xl bg-black text-white font-semibold" onClick={()=>onAdd(item)} disabled={!item.available}>
-                  {item.available ? "Adicionar ao carrinho" : "Indisponível"}
+          </div>
+        )}
+
+        {/* Conteúdo só aparece quando a imagem estiver pronta */}
+        {imgReady && (
+          <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
+            <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
+              <div className="relative">
+                <div className="w-full bg-black flex items-center justify-center">
+                  <img
+                    src={imgSrc}
+                    alt={item.name}
+                    className="max-h-[80vh] w-auto object-contain"
+                    onError={(e) => {
+                      const fb = driveThumb(item.img, 1600);
+                      if (e.currentTarget.src !== fb) {
+                        e.currentTarget.src = fb;
+                      }
+                    }}
+                    decoding="async"
+                  />
+                </div>
+                <button
+                  className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border"
+                  onClick={onClose}
+                >
+                  Fechar
                 </button>
-                {isAdmin && (
-                  <button className="px-4 py-2 rounded-xl border" onClick={()=>setEdit(true)}>Editar</button>
-                )}
+              </div>
+
+              <div className="p-4 sm:p-6 space-y-2">
+                <h3 className="text-xl sm:text-2xl font-extrabold">{item.name}</h3>
+                <div className="text-neutral-600">{item.desc}</div>
+                <div className="text-lg sm:text-xl font-bold">{currency(item.price)}</div>
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    className="px-4 py-2 rounded-xl bg-black text-white font-semibold"
+                    onClick={() => onAdd(item)}
+                    disabled={!item.available}
+                  >
+                    {item.available ? "Adicionar ao carrinho" : "Indisponível"}
+                  </button>
+                  {isAdmin && (
+                    <button className="px-4 py-2 rounded-xl border" onClick={() => setEdit(true)}>
+                      Editar
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {edit && (
         <EditModal
           item={item}
-          onClose={()=>setEdit(false)}
-          onSave={(d)=>{ onEdit(d); setEdit(false); }}
+          onClose={() => setEdit(false)}
+          onSave={(d) => {
+            onEdit(d);
+            setEdit(false);
+          }}
         />
       )}
     </ModalPortal>
   );
 }
+
 
 /* ===== Modal de edição — via Portal ===== */
 function EditModal({ item, onClose, onSave }){
