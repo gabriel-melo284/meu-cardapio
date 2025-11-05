@@ -117,79 +117,79 @@ export default function App() {
   }
 
   /* --- PÁGINA PRINCIPAL (MENU) --- */
-  return (
-    <div className="min-h-screen bg-neutral-50 pr-0 md:pr-[380px]">
-      {/* reserva lateral p/ o carrinho fixo no desktop */}
-      <Header isAdmin={isAdmin} onOpenOrders={() => setPage("pedidos")} />
-      <Banner />
+  // ✅ CERTO
+   return (
+     <div className="min-h-screen bg-neutral-50 pr-0 md:pr-[380px]">
+       {/* reserva lateral p/ o carrinho fixo no desktop */}
+       <Header isAdmin={isAdmin} onOpenOrders={() => setPage("pedidos")} />
+       <Banner />
+   
+       <TopBarActions isAdmin={isAdmin} onOpenOrders={() => setPage("pedidos")} />
+       <SearchBar query={query} setQuery={setQuery} />
+   
+       <Tabs
+         tab={tab}
+         setTab={setTab}
+         categories={categories}
+         query={query}
+         isAdmin={isAdmin}
+         setShowNewCat={setShowNewCat}
+       />
+   
+       <ProductList
+         menu={menu}
+         categories={categories}
+         tab={tab}
+         query={query}
+         addToCart={addToCart}
+         isAdmin={isAdmin}
+         setMenu={setMenu}
+         setViewItem={setViewItem}
+         setShowNewItem={setShowNewItem}
+         setNewItemCat={setNewItemCat}
+       />
+   
+       <Cart
+         cart={cart}
+         updateQty={updateQty}
+         subtotal={subtotal}
+         setPage={setPage}
+         isAdmin={isAdmin}
+       />
+   
+       {viewItem && (
+         <ItemViewModal
+           item={viewItem}
+           onClose={() => setViewItem(null)}
+           onAdd={addToCart}
+           setViewItem={setViewItem}
+           setMenu={setMenu}
+           isAdmin={isAdmin}
+         />
+       )}
+   
+       {showNewCat && (
+         <NewCategoryModal
+           categories={categories}
+           setCategories={setCategories}
+           setTab={setTab}
+           onClose={() => setShowNewCat(false)}
+         />
+       )}
+   
+       {showNewItem && (
+         <NewItemModal
+           categories={categories}
+           currentCategory={newItemCat || tab}
+           onSave={(d) => setMenu((prev) => [...prev, d])}
+           onClose={() => setShowNewItem(false)}
+         />
+       )}
+   
+       <WhatsFab phone={STORE.whatsPhone || "5534998970471"} />
+     </div>
+   );
 
-      <TopBarActions isAdmin={isAdmin} onOpenOrders={() => setPage("pedidos")} />
-
-      <SearchBar query={query} setQuery={setQuery} />
-
-      <Tabs
-        tab={tab}
-        setTab={setTab}
-        categories={categories}
-        query={query}
-        isAdmin={isAdmin}
-        setShowNewCat={setShowNewCat}
-      />
-
-      <ProductList
-        menu={menu}
-        categories={categories}
-        tab={tab}
-        query={query}
-        addToCart={addToCart}
-        isAdmin={isAdmin}
-        setMenu={setMenu}
-        setViewItem={setViewItem}
-        setShowNewItem={setShowNewItem}
-        setNewItemCat={setNewItemCat}
-      />
-
-      <Cart
-        cart={cart}
-        updateQty={updateQty}
-        subtotal={subtotal}
-        setPage={setPage}
-        isAdmin={isAdmin}
-      />
-
-      {/* MODAIS */}
-      {viewItem && (
-        <ItemViewModal
-          item={viewItem}
-          onClose={() => setViewItem(null)}
-          onAdd={addToCart}
-          setViewItem={setViewItem}
-          setMenu={setMenu}
-          isAdmin={isAdmin}
-        />
-      )}
-
-      {showNewCat && (
-        <NewCategoryModal
-          categories={categories}
-          setCategories={setCategories}
-          setTab={setTab}
-          onClose={() => setShowNewCat(false)}
-        />
-      )}
-
-      {showNewItem && (
-        <NewItemModal
-          categories={categories}
-          currentCategory={newItemCat || tab}
-          onSave={(d) => setMenu((prev) => [...prev, d])}
-          onClose={() => setShowNewItem(false)}
-        />
-      )}
-
-      <WhatsFab phone={STORE.whatsPhone || "5534998970471"} />
-    </div>
-  );
 }
 
 /* =================== AUXILIAR: Ações de topo =================== */
@@ -229,3 +229,4 @@ function WhatsFab({ phone }) {
     </a>
   );
 }
+
