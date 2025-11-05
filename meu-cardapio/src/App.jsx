@@ -11,29 +11,32 @@ import Cart from "./components/Cart";
 /* PÁGINAS INTERNAS */
 import PixPage from "./components/PixPage";
 import AdminOrders from "./components/AdminOrders";
+import OrderPlacedPage from "./components/OrderPlacedPage";
 
 /* MODAIS */
 import ItemViewModal from "./components/ItemViewModal";
 import EditModal from "./components/EditModal";
 import NewItemModal from "./components/NewItemModal";
 import NewCategoryModal from "./components/NewCategoryModal";
+import CheckoutModal from "./components/CheckoutModal";
+
+/* FIXOS */
+import TopBarActions from "./components/TopBarActions";
+import WhatsFab from "./components/WhatsFab";
 
 /* HELPERS */
 import { load, save } from "./helpers/storage";
 import { getParam } from "./helpers/utils";
-
-/* CONFIG */
 import { STORE, DEFAULT_CATEGORIES, DEFAULT_MENU, LS } from "./helpers/config";
 
 export default function App() {
   const hasAccess = getParam("access") === "umami";
   const isAdmin = hasAccess && getParam("admin") === "admin";
 
-  const [page, setPage] = useState("menu"); // "menu" | "pix" | "pedidos"
+  const [page, setPage] = useState("menu"); // "menu" | "pix" | "pedidos" | "orderPlaced"
+  const [orderJustSaved, setOrderJustSaved] = useState(null);
 
-  const [categories, setCategories] = useState(() =>
-    load(LS.cats("umami"), DEFAULT_CATEGORIES)
-  );
+  const [categories, setCategories] = useState(() => load(LS.cats("umami"), DEFAULT_CATEGORIES));
   const [menu, setMenu] = useState(() => load(LS.menu("umami"), DEFAULT_MENU));
   const [orders, setOrders] = useState(() => load(LS.orders("umami"), []));
 
@@ -45,6 +48,8 @@ export default function App() {
   const [showNewCat, setShowNewCat] = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
   const [newItemCat, setNewItemCat] = useState("");
+
+  const [showCheckout, setShowCheckout] = useState(false);
 
   useEffect(() => save(LS.cats("umami"), categories), [categories]);
   useEffect(() => save(LS.menu("umami"), menu), [menu]);
@@ -72,6 +77,26 @@ export default function App() {
     setCart([]);
   }
 
+  // salva pedido quando NÃO é PIX
+  function placeOrderWithoutPix(payment) {
+    const orderId = "P" + Date.now();
+    const dataBR = new Date().toLocaleString("pt-BR");
+    const novo = {
+      id: orderId,
+      data: dataBR,
+      items: cart,
+      total: subtotal,
+      payment,
+      status: "aguardando pagamento",
+    };
+    const next = [...orders, novo];
+    setOrders(next);
+    save(LS.orders("umami"), next);
+    clearCart();
+    setOrderJustSaved(novo);
+    setPage("orderPlaced");
+  }
+
   if (!hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center text-center p-6">
@@ -87,27 +112,48 @@ export default function App() {
 
   if (page === "pix") {
     return (
-      <PixPage
-        cart={cart}
-        subtotal={subtotal}
-        clearCart={clearCart}
-        orders={orders}
-        setOrders={setOrders}
-        setPage={setPage}
-      />
+      <>
+        <TopBarActions isAdmin={isAdmin} onGoAdmin={() => setPage("pedidos")} />
+        <WhatsFab />
+        <PixPage
+          cart={cart}
+          subtotal={subtotal}
+          clearCart={clearCart}
+          orders={orders}
+          setOrders={setOrders}
+          setPage={setPage}
+        />
+      </>
     );
   }
 
   if (page === "pedidos" && isAdmin) {
-    return <AdminOrders orders={orders} setOrders={setOrders} setPage={setPage} />;
+    return (
+      <>
+        <TopBarActions isAdmin={isAdmin} onGoAdmin={() => setPage("pedidos")} />
+        <WhatsFab />
+        <AdminOrders orders={orders} setOrders={setOrders} setPage={setPage} />
+      </>
+    );
+  }
+
+  if (page === "orderPlaced") {
+    return (
+      <>
+        <TopBarActions isAdmin={isAdmin} onGoAdmin={() => setPage("pedidos")} />
+        <WhatsFab />
+        <OrderPlacedPage order={orderJustSaved} onBack={() => setPage("menu")} />
+      </>
+    );
   }
 
   return (
-    {/* reserva lateral p/ o carrinho fixo no desktop */}
     <div className="min-h-screen bg-neutral-50 pr-0 md:pr-[380px]">
+      <TopBarActions isAdmin={isAdmin} onGoAdmin={() => setPage("pedidos")} />
+      <WhatsFab presetMsg="Olá! Gostaria de falar sobre um pedido." />
+
       <Banner />
       <Header />
-
       <SearchBar query={query} setQuery={setQuery} />
 
       <Tabs
@@ -134,13 +180,13 @@ export default function App() {
         />
       </div>
 
-      {/* Carrinho fixo à direita */}
       <Cart
         cart={cart}
         updateQty={updateQty}
         subtotal={subtotal}
-        setPage={setPage}
         isAdmin={isAdmin}
+        onCheckout={() => setShowCheckout(true)}
+        onGoAdmin={() => setPage("pedidos")}
       />
 
       {/* MODAIS */}
@@ -172,6 +218,21 @@ export default function App() {
           onClose={() => setShowNewItem(false)}
         />
       )}
+
+      <CheckoutModal
+        open={showCheckout}
+        subtotal={subtotal}
+        onClose={() => setShowCheckout(false)}
+        onChoose={(method) => {
+          setShowCheckout(false);
+          if (method === "pix") {
+            setPage("pix"); // fluxo PIX (salva no PixPage)
+          } else {
+            // não executar PIX; apenas salvar pedido e mostrar confirmação
+            placeOrderWithoutPix(method);
+          }
+        }}
+      />
     </div>
   );
 }
