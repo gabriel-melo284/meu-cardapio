@@ -16,13 +16,26 @@ const LS = {
   menu: (ak) => `menu_v6_${ak}`,
 };
 
+// Resolve arquivos do /public em qualquer bundler ou subpasta
+function publicAsset(p) {
+  try {
+    const base =
+      (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.BASE_URL) ||
+      (typeof process !== "undefined" && process.env && process.env.PUBLIC_URL) ||
+      "/";
+    return `${String(base).replace(/\/$/, "")}/${String(p).replace(/^\//, "")}`;
+  } catch {
+    return `/${String(p).replace(/^\//, "")}`;
+  }
+}
+
 const STORE = {
   name: "Umami Fit - Gourmet",
   address: "Santa Mônica",
   city: "Uberlândia",
   opensAt: "08:00",
   closesAt: "18:00",
-  banner: "/banner.png",
+  banner: "/banner.jpg",
   logo: "/umami-logo.png",     // /public/umami-logo.png
 };
 
