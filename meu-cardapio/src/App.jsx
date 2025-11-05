@@ -168,8 +168,6 @@ export default function App(){
     }
   };
 
-  };
-
   // Busca global auto-seleciona sessão (a menos que o usuário clique numa guia)
   useEffect(()=>{
     const q = query.trim().toLowerCase();
