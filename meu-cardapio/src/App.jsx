@@ -205,7 +205,7 @@ export default function App(){
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      {/* Banner */}
+      {/* Banner (somente imagem de fundo, sem conteúdo por cima) */}
       <div className="relative h-72 sm:h-80 md:h-96 overflow-hidden">
         <img
           src={STORE.banner}
@@ -214,21 +214,34 @@ export default function App(){
           onError={(e)=>{ e.currentTarget.onerror=null; e.currentTarget.src="data:image/svg+xml;utf8,\
           <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 400'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%23ffe08a'/><stop offset='1' stop-color='%23ffb347'/></linearGradient></defs><rect width='1200' height='400' fill='url(%23g)'/></svg>"; }}
         />
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="absolute inset-0 flex items-end">
-          <div className="max-w-7xl mx-auto w-full px-4 pb-6">
-            <div className="flex items-center gap-4">
-              <img src={STORE.logo} alt="logo" className="w-40 h-40 rounded-full ring-8 ring-white object-cover bg-white shadow-md"/>
-              <div className="space-y-1">
-                <h1 className="text-white text-3xl sm:text-4xl md:text-5xl font-extrabold">{STORE.name}</h1>
-                <p className="text-white/95 text-base sm:text-lg md:text-xl font-medium">
-                  {STORE.address} • {STORE.city}
-                </p>
-                <p className="text-white/90 text-sm sm:text-base md:text-lg font-semibold">{statusText}</p>
-              </div>
+        {/* opcional: leve escurecida para dar contraste ao recorte do banner */}
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+      </div>
+      
+      {/* Header da loja (fora do banner) */}
+      <div className="bg-white">
+        <div className="max-w-7xl mx-auto w-full px-4">
+          <div className="flex items-center gap-4 -mt-10 sm:-mt-12">
+            <img
+              src={STORE.logo}
+              alt="logo"
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-8 ring-white object-cover bg-white shadow-md"
+            />
+            <div className="py-3">
+              <h1 className="text-neutral-900 text-2xl sm:text-3xl md:text-4xl font-extrabold">
+                {STORE.name}
+              </h1>
+              <p className="text-neutral-700 text-sm sm:text-base md:text-lg font-medium">
+                {STORE.address} • {STORE.city}
+              </p>
+              <p className="text-neutral-600 text-sm sm:text-base md:text-lg font-semibold">
+                {statusText}
+              </p>
             </div>
           </div>
         </div>
+      </div>
+
       </div>
 
       {/* Top bar (lupa à esquerda) */}
