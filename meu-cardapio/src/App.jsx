@@ -678,7 +678,10 @@ function NewItemModal({ currentCategory, categories = [], onClose, onSave }) {
                 onClick={() => {
                   if (!form.name.trim()) return alert("Dê um nome ao item.");
                   if (!form.category) return alert("Selecione uma sessão.");
-                  onSave(form);
+                  onSave({
+                    ...form,
+                    img: normalizeImageUrl(form.img),
+                  });
                 }}
               >
                 Adicionar
