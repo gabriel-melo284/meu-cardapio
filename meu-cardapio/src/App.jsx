@@ -769,17 +769,21 @@ function SmartImage({
   };
 
   return (
-    <div className={`relative w-full ${className}`} style={wrapperStyle}>
+    {/* área da imagem — centralizada perfeitamente */}
+    <div className="relative w-full bg-white flex justify-center items-center"
+         style={{ maxHeight: "60vh" }}>
+      
       <img
         src={imgSrc}
-        alt={alt}
-        className="block w-full h-auto object-contain"
-        style={maxHeightVH ? { maxHeight: `${maxHeightVH}vh` } : undefined}
-        onError={(e) => {
-          const fb = driveThumb(src, 1600);
-          if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
-        }}
+        alt={item.name}
+        className="object-contain max-h-[60vh] w-auto mx-auto"
         decoding="async"
+        onLoad={() => requestAnimationFrame(() => setPainted(true))}
+        onError={(e) => {
+          const fb = driveThumb(item.img, 1600);
+          if (e.currentTarget.src !== fb) e.currentTarget.src = fb;
+          else requestAnimationFrame(() => setPainted(true));
+        }}
       />
     </div>
   );
