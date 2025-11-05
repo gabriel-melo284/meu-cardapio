@@ -444,15 +444,14 @@ export default function App(){
 }
 
 /* =================== SUBCOMPONENTES =================== */
-function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
+function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }) {
   const [editing, setEditing] = useState(false);
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border flex flex-col">
-      <button className="w-full" onClick={()=>onView(item)}>
+      <button className="w-full" onClick={() => onView(item)}>
         <SmartImage src={item.img} alt={item.name} />
       </button>
-        <SmartImage src={item.img} alt={item.name} />
-      </button>
+
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -460,14 +459,34 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
             <span className="text-sm font-semibold">{currency(item.price)}</span>
           </div>
           <p className="text-sm text-neutral-600 mt-1 line-clamp-3">{item.desc}</p>
-          {!item.available && <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-neutral-100">Indisponível</span>}
+          {!item.available && (
+            <span className="inline-block mt-2 text-xs px-2 py-1 rounded-full bg-neutral-100">
+              Indisponível
+            </span>
+          )}
         </div>
+
         <div className="mt-3 flex items-center gap-2">
-          <button className="flex-1 py-2 rounded-xl border font-medium disabled:opacity-50" disabled={!item.available} onClick={()=>onAdd(item)}>Adicionar</button>
+          <button
+            className="flex-1 py-2 rounded-xl border font-medium disabled:opacity-50"
+            disabled={!item.available}
+            onClick={() => onAdd(item)}
+          >
+            Adicionar
+          </button>
+
           {isAdmin && (
             <>
-              <button className="px-3 py-2 rounded-xl border" onClick={()=>setEditing(true)}>Editar</button>
-              <button className="px-3 py-2 rounded-xl border" onClick={()=>onDelete(item.id)} title="Remover">🗑️</button>
+              <button className="px-3 py-2 rounded-xl border" onClick={() => setEditing(true)}>
+                Editar
+              </button>
+              <button
+                className="px-3 py-2 rounded-xl border"
+                onClick={() => onDelete(item.id)}
+                title="Remover"
+              >
+                🗑️
+              </button>
             </>
           )}
         </div>
@@ -476,8 +495,11 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
       {editing && (
         <EditModal
           item={item}
-          onClose={()=>setEditing(false)}
-          onSave={(data)=>{ onEdit(data); setEditing(false); }}
+          onClose={() => setEditing(false)}
+          onSave={(data) => {
+            onEdit(data);
+            setEditing(false);
+          }}
         />
       )}
     </div>
