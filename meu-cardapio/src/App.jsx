@@ -97,6 +97,26 @@ export default function App(){
   const [manualTabPriority, setManualTabPriority] = useState(false);
 
   const tabs = useMemo(() => [{ id:"principal", label:"Principal" }, ...categories], [categories]);
+  // Abre o modal somente quando a imagem estiver carregada
+  const openItemModal = async (item) => {
+    // URL “normalizada” (aceita Drive, etc.)
+    const primary = normalizeImageUrl(item.img);
+  
+    try {
+      await preloadImage(primary);
+      setViewItem({ ...item, img: primary });
+    } catch {
+      // fallback (Drive thumbnail), também pré-carregado
+      const fallback = driveThumb(item.img, 1600);
+      try {
+        await preloadImage(fallback);
+        setViewItem({ ...item, img: fallback });
+      } catch {
+        // em último caso, abre sem imagem (praticamente não ocorre)
+        setViewItem(item);
+      }
+    }
+  };
 
   useEffect(()=> safeSave(LS.cats(ACCESS_KEY), categories), [categories]);
   useEffect(()=> safeSave(LS.menu(ACCESS_KEY), menu), [menu]);
@@ -282,15 +302,13 @@ export default function App(){
                         <CardItem
                           key={item.id}
                           item={item}
-                          onAdd={(it)=> setCart(prev=>{
-                            const f = prev.find(p=>p.id===it.id);
-                            return f ? prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p) : [...prev, {...it, qty:1}];
-                          })}
+                          onAdd={...}
                           isAdmin={isAdmin}
                           onEdit={upsertItem}
                           onDelete={removeItem}
-                          onView={setViewItem}
+                          onView={openItemModal}   // <— aqui
                         />
+
                       ))}
                     </div>
                   </div>
@@ -303,15 +321,13 @@ export default function App(){
                 <CardItem
                   key={item.id}
                   item={item}
-                  onAdd={(it)=> setCart(prev=>{
-                    const f = prev.find(p=>p.id===it.id);
-                    return f ? prev.map(p=>p.id===it.id?{...p,qty:p.qty+1}:p) : [...prev, {...it, qty:1}];
-                  })}
+                  onAdd={...}
                   isAdmin={isAdmin}
                   onEdit={upsertItem}
                   onDelete={removeItem}
-                  onView={setViewItem}
+                  onView={openItemModal}   // <— aqui
                 />
+
               ))}
             </div>
           )}
@@ -385,6 +401,16 @@ export default function App(){
       </footer>
     </div>
   );
+}
+
+// Precarrega uma imagem e resolve quando estiver pronta
+function preloadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(src);
+    img.onerror = reject;
+    img.src = src;
+  });
 }
 
 /* ===== Utils: Drive link -> URL direta ===== */
