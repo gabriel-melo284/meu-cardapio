@@ -249,7 +249,6 @@ export default function App(){
   const statusText = businessStatus(STORE.opensAt, STORE.closesAt);
 
   return (
-    {/* Banner (30% menor) */}
     <div className="min-h-screen bg-neutral-50">
       {/* Banner (30% menor) */}
       <div className="relative z-0 h-52 sm:h-56 md:h-64 overflow-hidden">
