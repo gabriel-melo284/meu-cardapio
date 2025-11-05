@@ -11,7 +11,7 @@ export default function Header() {
         <img
           src={STORE.logo}
           alt="logo"
-          className="w-20 h-20 rounded-full object-cover ring-4 ring-white shadow-md"
+          className="w-28 h-28 sm:w-32 sm:h-32"
         />
 
         {/* Texto */}
@@ -32,3 +32,4 @@ export default function Header() {
     </div>
   );
 }
+
