@@ -388,19 +388,40 @@ export default function App(){
 }
 
 /* ===== Utils: Drive link -> URL direta ===== */
-function driveToDirect(url) {
+// --- Google Drive helpers ---
+function extractDriveId(url) {
   try {
-    if (!url) return url;
-    const m1 = url.match(/\/d\/([A-Za-z0-9_-]{10,})/); // /file/d/ID/
-    if (m1) return `https://drive.google.com/uc?export=view&id=${m1[1]}`;
+    if (!url) return null;
+    // /file/d/ID/view...
+    const m = url.match(/\/d\/([A-Za-z0-9_-]{10,})/);
+    if (m) return m[1];
+    // ...?id=ID
     const u = new URL(url);
-    const id = u.searchParams.get("id");
-    if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
-    return url;
+    return u.searchParams.get("id");
   } catch {
-    return url;
+    return null;
   }
 }
+
+// URL direta (preferida para <img>)
+function driveDirect(url) {
+  const id = extractDriveId(url);
+  return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
+}
+
+// Fallback (quando a direta sofre bloqueio de hotlink/quotas)
+function driveThumb(url, size = 1600) {
+  const id = extractDriveId(url);
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${size}` : url;
+}
+
+// Normalizador: recebe qualquer link do Drive e devolve um <img src> válido
+function normalizeImageUrl(url, size = 1600) {
+  const id = extractDriveId(url);
+  if (!id) return url;
+  return `https://drive.google.com/uc?export=view&id=${id}`;
+}
+
 
 /* =================== SUBCOMPONENTES =================== */
 function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
@@ -408,7 +429,17 @@ function CardItem({ item, onAdd, isAdmin, onEdit, onDelete, onView }){
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border flex flex-col">
       <button className="h-40 w-full overflow-hidden" onClick={()=>onView(item)}>
-        <img src={item.img} alt={item.name} className="w-full h-full object-cover"/>
+        <img
+          src={normalizeImageUrl(item.img)}
+          alt={item.name}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // se a direta falhar, tenta thumbnail
+            const id = extractDriveId(item.img);
+            if (id) e.currentTarget.src = driveThumb(item.img, 1600);
+          }}
+        />
+
       </button>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex-1">
@@ -452,7 +483,16 @@ function ViewItemModal({ item, onClose, onAdd, isAdmin, onEdit }){
         <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-6 pointer-events-none">
           <div className="pointer-events-auto bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
             <div className="relative">
-              <img src={item.img} alt={item.name} className="w-full h-64 sm:h-80 md:h-96 object-cover"/>
+              <img
+                src={normalizeImageUrl(item.img)}
+                alt={item.name}
+                className="w-full h-64 sm:h-80 md:h-96 object-cover"
+                onError={(e) => {
+                  const id = extractDriveId(item.img);
+                  if (id) e.currentTarget.src = driveThumb(item.img, 1600);
+                }}
+              />
+
               <button className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 border" onClick={onClose}>Fechar</button>
             </div>
             <div className="p-4 sm:p-6 space-y-2">
@@ -596,9 +636,10 @@ function NewItemModal({ currentCategory, categories = [], onClose, onSave }) {
                 <span className="text-neutral-500">Nome</span>
                 <input
                   className="w-full border rounded-xl px-3 py-2"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  value={form.img}
+                  onChange={(e)=>setForm({...form, img: normalizeImageUrl(e.target.value)})}
                 />
+
               </label>
 
               <label className="text-sm">
@@ -636,11 +677,13 @@ function NewItemModal({ currentCategory, categories = [], onClose, onSave }) {
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      img: driveToDirect(e.target.value),
+                      img: normalizeImageUrl(e.target.value),
                     })
                   }
                   placeholder="Cole o link (Drive/externo)."
                 />
+
+
               </label>
 
               <label className="text-sm">
