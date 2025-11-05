@@ -1,18 +1,15 @@
-import { STORE } from "../helpers/config";
-
-export default function WhatsFab({ presetMsg = "Olá! Quero fazer um pedido." }) {
-  const href = `https://wa.me/${STORE.whatsPhone}?text=${encodeURIComponent(presetMsg)}`;
+export default function WhatsFab({ phone }) {
+  const href = `https://wa.me/${phone.replace(/\D/g, "")}`;
   return (
     <a
       href={href}
       target="_blank"
-      rel="noopener noreferrer"
-      className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full bg-[#25D366] shadow-lg flex items-center justify-center hover:opacity-90"
-      title="Falar no WhatsApp"
+      rel="noreferrer"
+      className="fixed md:right-6 right-4 md:bottom-6 bottom-4 inline-flex items-center justify-center w-14 h-14 rounded-full shadow-lg bg-[#25D366]"
+      aria-label="WhatsApp"
     >
-      <svg viewBox="0 0 32 32" width="26" height="26" fill="none">
-        <path d="M16 3C9.4 3 4 8.4 4 15c0 2.6.8 5 2.2 7L4 29l7-2c1.9 1.2 4.2 1.9 6.6 1.9 6.6 0 12-5.4 12-12S22.6 3 16 3Z" fill="#25D366"/>
-        <path d="M12.9 10.8c-.2-.6-.4-.6-.6-.6h-.5c-.2 0-.6.1-.9.4-.3.3-1.2 1.1-1.2 2.7 0 1.6 1.2 3.2 1.4 3.5.2.3 2.4 3.8 5.9 5.2 2.9 1.1 3.5.9 4.1.8.6-.1 2-.8 2.3-1.7.3-.9.3-1.6.2-1.7-.1-.1-.3-.2-.6-.4-.3-.2-2-.9-2.3-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.1-.2.1-.4.2-.7 0-.3-.2-1.2-.4-2.3-1.5-0.8-.8-1.4-1.8-1.6-2.1-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.6.1-.2.1-.3.2-.5.1-.2 0-.4 0-.6 0-.2-.6-1.6-.8-2.1Z" fill="#fff"/>
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+        <path fill="#fff" d="M19.11 17.39c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.47-.89-.79-1.49-1.77-1.67-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37 0-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.48-.5-.67-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.47s1.07 2.86 1.22 3.06c.15.2 2.1 3.22 5.1 4.52.71.31 1.26.49 1.69.62.71.23 1.35.2 1.86.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.08-.12-.27-.2-.57-.35zM26.7 5.3C23.9 2.5 20.2 1 16.2 1 8.5 1 2.3 7.2 2.3 14.9c0 2.4.6 4.8 1.8 6.9L2 31l9.4-2.5c2 .9 4.1 1.3 6.3 1.3 7.7 0 13.9-6.2 13.9-13.9 0-3.7-1.5-7.4-4.3-10.2zM16.7 27.7c-2 .0-3.9-.5-5.6-1.4l-.4-.2-5.5 1.5 1.5-5.3-.3-.4c-1.1-1.8-1.7-3.9-1.7-6 0-6.5 5.3-11.8 11.8-11.8 3.1 0 6.1 1.2 8.3 3.5 2.2 2.2 3.5 5.2 3.5 8.3 0 6.5-5.3 11.8-11.8 11.8z"/>
       </svg>
     </a>
   );
