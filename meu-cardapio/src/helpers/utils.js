@@ -1,6 +1,6 @@
 // Moeda BRL
 export const currency = (n) =>
-  Number(n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 // Query param
 export const getParam = (k) => {
@@ -37,3 +37,4 @@ export const businessStatus = (opensAt, closesAt) => {
   if (now >= open && now <= close) return `Fecha às ${closesAt}`;
   return `Abre amanhã às ${opensAt}`;
 };
+
