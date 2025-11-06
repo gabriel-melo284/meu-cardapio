@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { currency } from "../helpers/utils";
 import { STORE } from "../helpers/config";
-import { generatePixPayload, generateQRCodeSVG } from "../helpers/pix"; // seu helper atual
+import { generatePixPayload, generateQRCodeSVG } from "../helpers/pix";
 
 export default function PixPage({ cart, subtotal, clearCart, orders, setOrders, setPage }) {
   const orderId = "P" + Date.now();
@@ -88,3 +88,4 @@ export default function PixPage({ cart, subtotal, clearCart, orders, setOrders, 
     </div>
   );
 }
+
